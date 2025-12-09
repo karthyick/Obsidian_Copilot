@@ -3,8 +3,9 @@
   "name": "AI Assistant",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
-  "description": "AI chatbot powered by AWS Bedrock with full note control capabilities",
+  "description": "AI chatbot with multi-provider support (AWS Bedrock, Google Gemini, Groq) and full note editing capabilities. Features glassmorphism UI, context awareness, and Mermaid diagram generation.",
   "author": "KR",
   "authorUrl": "https://github.com/karthyick",
+  "fundingUrl": "",
   "isDesktopOnly": true
 }
