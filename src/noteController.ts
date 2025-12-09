@@ -13,9 +13,22 @@ import { NoteContext, EditorPosition, EditorRange } from "./types";
  */
 export class NoteController {
   private app: App;
+  private lastActiveMarkdownView: MarkdownView | null = null;
+  private lastActiveFile: TFile | null = null;
 
   constructor(app: App) {
     this.app = app;
+
+    // Track the last active markdown view
+    this.app.workspace.on("active-leaf-change", (leaf) => {
+      if (leaf) {
+        const view = leaf.view;
+        if (view instanceof MarkdownView && view.file) {
+          this.lastActiveMarkdownView = view;
+          this.lastActiveFile = view.file;
+        }
+      }
+    });
   }
 
   // ============================================
@@ -24,17 +37,40 @@ export class NoteController {
 
   /**
    * Get the currently active note file
+   * Falls back to last active file if current view isn't a markdown view
    */
   public getActiveNote(): TFile | null {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    return view?.file ?? null;
+    if (view?.file) {
+      return view.file;
+    }
+    // Fall back to last active file (e.g., when AI panel is focused)
+    return this.lastActiveFile;
   }
 
   /**
    * Get the active markdown view
+   * Falls back to last active view if current view isn't a markdown view
    */
   public getActiveMarkdownView(): MarkdownView | null {
-    return this.app.workspace.getActiveViewOfType(MarkdownView);
+    const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (currentView) {
+      return currentView;
+    }
+    // Fall back to last active markdown view
+    // But verify it's still valid (the leaf might have been closed)
+    if (this.lastActiveMarkdownView) {
+      // Check if the view is still attached and has a file
+      try {
+        if (this.lastActiveMarkdownView.file && this.lastActiveMarkdownView.editor) {
+          return this.lastActiveMarkdownView;
+        }
+      } catch {
+        // View might have been destroyed
+        this.lastActiveMarkdownView = null;
+      }
+    }
+    return null;
   }
 
   /**
@@ -43,6 +79,20 @@ export class NoteController {
   public getActiveEditor(): Editor | null {
     const view = this.getActiveMarkdownView();
     return view?.editor ?? null;
+  }
+
+  /**
+   * Force refresh the last active view by finding any open markdown view
+   */
+  public refreshLastActiveView(): void {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    for (const leaf of leaves) {
+      if (leaf.view instanceof MarkdownView && leaf.view.file) {
+        this.lastActiveMarkdownView = leaf.view;
+        this.lastActiveFile = leaf.view.file;
+        break;
+      }
+    }
   }
 
   /**

@@ -50,7 +50,7 @@ export const DEFAULT_SETTINGS: AIAssistantSettings = {
 
   // Gemini
   geminiApiKey: "",
-  geminiModelId: "gemini-1.5-pro",
+  geminiModelId: "gemini-2.0-flash",
 
   // Groq
   groqApiKey: "",

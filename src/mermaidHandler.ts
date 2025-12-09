@@ -131,17 +131,113 @@ export class MermaidHandler {
   }
 
   /**
-   * Format Mermaid code for insertion into a note
+   * Sanitize Mermaid node labels by removing special characters that break Obsidian rendering
+   * Obsidian's Mermaid renderer is VERY strict about special characters in node labels
+   */
+  public sanitizeMermaidCode(code: string): string {
+    const lines = code.split('\n');
+    const sanitizedLines: string[] = [];
+
+    for (const line of lines) {
+      let sanitizedLine = line;
+
+      // Match node definitions with labels in brackets [], parentheses (), or braces {}
+      // Pattern: nodeId[label], nodeId(label), nodeId{label}, nodeId([label]), nodeId[[label]], etc.
+      const nodePatterns = [
+        /(\w+)\s*\[([^\]]+)\]/g,      // A[label]
+        /(\w+)\s*\(([^)]+)\)/g,       // A(label)
+        /(\w+)\s*\{([^}]+)\}/g,       // A{label}
+        /(\w+)\s*\[\[([^\]]+)\]\]/g,  // A[[label]]
+        /(\w+)\s*\[\(([^)]+)\)\]/g,   // A[(label)]
+        /(\w+)\s*\(\[([^\]]+)\]\)/g,  // A([label])
+        /(\w+)\s*\(\(([^)]+)\)\)/g,   // A((label))
+        /(\w+)\s*\[\{([^}]+)\}\]/g,   // A[{label}]
+      ];
+
+      for (const pattern of nodePatterns) {
+        sanitizedLine = sanitizedLine.replace(pattern, (match, nodeId, label) => {
+          const cleanLabel = this.sanitizeNodeLabel(label);
+          // Preserve the original bracket type
+          const bracketStart = match.indexOf(nodeId) + nodeId.length;
+          const brackets = match.substring(bracketStart).replace(label, cleanLabel);
+          return nodeId + brackets;
+        });
+      }
+
+      // Also sanitize edge labels |label|
+      sanitizedLine = sanitizedLine.replace(/\|([^|]+)\|/g, (match, label) => {
+        return `|${this.sanitizeNodeLabel(label)}|`;
+      });
+
+      sanitizedLines.push(sanitizedLine);
+    }
+
+    return sanitizedLines.join('\n');
+  }
+
+  /**
+   * Sanitize a single node label - remove or replace problematic characters
+   */
+  private sanitizeNodeLabel(label: string): string {
+    let clean = label;
+
+    // Remove backticks completely
+    clean = clean.replace(/`/g, '');
+
+    // Replace colons with hyphens or remove
+    clean = clean.replace(/:\s*/g, ' - ');
+    clean = clean.replace(/:/g, ' ');
+
+    // Replace quotes with nothing
+    clean = clean.replace(/["']/g, '');
+
+    // Replace parentheses with spaces
+    clean = clean.replace(/[()]/g, ' ');
+
+    // Replace brackets with spaces
+    clean = clean.replace(/[\[\]]/g, ' ');
+
+    // Replace braces with spaces
+    clean = clean.replace(/[{}]/g, ' ');
+
+    // Replace other problematic characters
+    clean = clean.replace(/[;|<>&@#$%^*+=\\]/g, ' ');
+
+    // Clean up multiple spaces
+    clean = clean.replace(/\s+/g, ' ').trim();
+
+    return clean;
+  }
+
+  /**
+   * Format Mermaid code for insertion into a note (with sanitization)
    */
   public formatForInsertion(code: string): string {
+    const sanitizedCode = this.sanitizeMermaidCode(code);
+    const trimmedCode = sanitizedCode.trim();
+    return `\`\`\`mermaid\n${trimmedCode}\n\`\`\``;
+  }
+
+  /**
+   * Format Mermaid code for insertion (legacy method without sanitization)
+   */
+  public formatForInsertionRaw(code: string): string {
     const trimmedCode = code.trim();
     return `\`\`\`mermaid\n${trimmedCode}\n\`\`\``;
   }
 
   /**
-   * Extract just the Mermaid code strings from text
+   * Extract just the Mermaid code strings from text (sanitized for Obsidian compatibility)
    */
   public extractMermaidCode(text: string): string[] {
+    const blocks = this.extractMermaidBlocks(text);
+    return blocks.map((block) => this.sanitizeMermaidCode(block.code));
+  }
+
+  /**
+   * Extract Mermaid code strings without sanitization (raw)
+   */
+  public extractMermaidCodeRaw(text: string): string[] {
     const blocks = this.extractMermaidBlocks(text);
     return blocks.map((block) => block.code);
   }

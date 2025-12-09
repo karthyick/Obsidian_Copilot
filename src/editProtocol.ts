@@ -20,15 +20,24 @@ export class EditProtocol {
    */
   public parseEditCommands(response: string): EditCommand[] {
     const commands: EditCommand[] = [];
+
+    // Pre-process the response to fix common LLM marker mistakes
+    const cleanedResponse = this.sanitizeMarkers(response);
+
+    // More forgiving regex pattern to handle variations
     const pattern = new RegExp(
-      `${EditProtocol.EDIT_START}\\s*([\\s\\S]*?)\\s*${EditProtocol.EDIT_END}`,
+      `<<<EDIT_START>>>\\s*([\\s\\S]*?)\\s*<<<EDIT_END>>>`,
       "g"
     );
 
     let match;
-    while ((match = pattern.exec(response)) !== null) {
+    while ((match = pattern.exec(cleanedResponse)) !== null) {
       try {
-        const jsonStr = match[1].trim();
+        let jsonStr = match[1].trim();
+
+        // Clean up common JSON issues from LLM responses
+        jsonStr = this.sanitizeJson(jsonStr);
+
         const parsed = JSON.parse(jsonStr);
 
         if (this.isValidEditCommand(parsed)) {
@@ -41,6 +50,56 @@ export class EditProtocol {
     }
 
     return commands;
+  }
+
+  /**
+   * Sanitize markers in the response to fix common LLM mistakes
+   */
+  private sanitizeMarkers(response: string): string {
+    let result = response;
+
+    // Fix incomplete/malformed START markers
+    // <<<EDIT_START>> -> <<<EDIT_START>>>
+    // <<EDIT_START>>> -> <<<EDIT_START>>>
+    result = result.replace(/<?<<?EDIT_START>?>?>?/g, "<<<EDIT_START>>>");
+
+    // Fix incomplete/malformed END markers
+    // <<<EDIT_END>> -> <<<EDIT_END>>>
+    // <<<EDIT_END>>} -> <<<EDIT_END>>>
+    // <<<EDIT_END>} -> <<<EDIT_END>>>
+    result = result.replace(/<?<<?EDIT_END>?>?>?[}\s]*/g, "<<<EDIT_END>>>");
+
+    // Handle case where LLM outputs JSON without proper markers
+    // Look for {"action": patterns that aren't wrapped in markers
+    const jsonActionPattern = /(?<!<<<EDIT_START>>>\s*)(\{"action"\s*:\s*"[^"]+"\s*,\s*"params"\s*:\s*\{[^}]+\}\s*\})(?!\s*<<<EDIT_END>>>)/g;
+    result = result.replace(jsonActionPattern, (match) => {
+      return `<<<EDIT_START>>>\n${match}\n<<<EDIT_END>>>`;
+    });
+
+    return result;
+  }
+
+  /**
+   * Sanitize JSON string to fix common LLM mistakes
+   */
+  private sanitizeJson(jsonStr: string): string {
+    let result = jsonStr;
+
+    // Remove trailing commas before closing braces/brackets
+    result = result.replace(/,(\s*[}\]])/g, "$1");
+
+    // Remove any trailing/leading non-JSON characters
+    result = result.replace(/^[^{]*/, "").replace(/[^}]*$/, "");
+
+    // Fix common escape issues
+    // Ensure the JSON starts with { and ends with }
+    const firstBrace = result.indexOf("{");
+    const lastBrace = result.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      result = result.substring(firstBrace, lastBrace + 1);
+    }
+
+    return result;
   }
 
   /**
@@ -379,22 +438,22 @@ export class EditProtocol {
    * Check if response contains edit commands
    */
   public hasEditCommands(response: string): boolean {
-    return (
-      response.includes(EditProtocol.EDIT_START) &&
-      response.includes(EditProtocol.EDIT_END)
-    );
+    // More forgiving check - look for the start marker at minimum
+    return response.includes("<<<EDIT_START>>>");
   }
 
   /**
    * Extract the display text (without edit command blocks) from a response
    */
   public getDisplayText(response: string): string {
+    // First sanitize the markers, then remove the blocks
+    const cleanedResponse = this.sanitizeMarkers(response);
     const pattern = new RegExp(
-      `${EditProtocol.EDIT_START}[\\s\\S]*?${EditProtocol.EDIT_END}`,
+      `<<<EDIT_START>>>[\\s\\S]*?<<<EDIT_END>>>`,
       "g"
     );
 
-    return response.replace(pattern, "").trim();
+    return cleanedResponse.replace(pattern, "").trim();
   }
 
   /**

@@ -1,20 +1,23 @@
-import { App, PluginSettingTab, Setting, Notice } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from "obsidian";
 import type AIAssistantPlugin from "./main";
 import {
   AIAssistantSettings,
   AIProvider,
   BEDROCK_MODELS,
-  GEMINI_MODELS,
-  GROQ_MODELS,
   AWS_REGIONS,
   PROVIDER_NAMES,
 } from "./types";
+import { ModelFetcher, ModelInfo } from "./modelFetcher";
 
 /**
  * Settings tab for the AI Assistant plugin
  */
 export class AIAssistantSettingTab extends PluginSettingTab {
   plugin: AIAssistantPlugin;
+  private geminiModels: ModelInfo[] = [];
+  private groqModels: ModelInfo[] = [];
+  private geminiDropdown: DropdownComponent | null = null;
+  private groqDropdown: DropdownComponent | null = null;
 
   constructor(app: App, plugin: AIAssistantPlugin) {
     super(app, plugin);
@@ -131,7 +134,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .setDesc("Your AWS access key ID")
       .addText((text) =>
         text
-          .setPlaceholder("AKIAIOSFODNN7EXAMPLE")
+          .setPlaceholder("Enter your access key ID")
           .setValue(this.plugin.settings.awsAccessKeyId)
           .onChange(async (value) => {
             this.plugin.settings.awsAccessKeyId = value;
@@ -144,7 +147,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .setDesc("Your AWS secret access key")
       .addText((text) => {
         text
-          .setPlaceholder("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+          .setPlaceholder("Enter your secret access key")
           .setValue(this.plugin.settings.awsSecretAccessKey)
           .onChange(async (value) => {
             this.plugin.settings.awsSecretAccessKey = value;
@@ -159,7 +162,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .setDesc("Session token for temporary credentials")
       .addText((text) => {
         text
-          .setPlaceholder("Optional session token")
+          .setPlaceholder("Enter session token (if using temporary credentials)")
           .setValue(this.plugin.settings.awsSessionToken)
           .onChange(async (value) => {
             this.plugin.settings.awsSessionToken = value;
@@ -241,24 +244,36 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.geminiApiKey = value;
             await this.plugin.saveSettings();
+            // Refresh models when API key changes
+            this.refreshGeminiModels();
           });
         text.inputEl.type = "password";
         return text;
       });
 
-    new Setting(section)
+    const modelSetting = new Setting(section)
       .setName("Model")
-      .setDesc("Select the Gemini model to use")
+      .setDesc("Select the Gemini model to use (fetched from API)")
       .addDropdown((dropdown) => {
-        for (const [value, label] of Object.entries(GEMINI_MODELS)) {
-          dropdown.addOption(value, label);
-        }
+        this.geminiDropdown = dropdown;
+        this.populateGeminiDropdown(dropdown);
         dropdown.setValue(this.plugin.settings.geminiModelId);
         dropdown.onChange(async (value) => {
           this.plugin.settings.geminiModelId = value;
           await this.plugin.saveSettings();
         });
-      });
+      })
+      .addButton((button) =>
+        button
+          .setIcon("refresh-cw")
+          .setTooltip("Refresh models from API")
+          .onClick(async () => {
+            button.setDisabled(true);
+            await this.refreshGeminiModels();
+            button.setDisabled(false);
+            new Notice("Gemini models refreshed");
+          })
+      );
 
     // Test Connection Button
     new Setting(section)
@@ -280,6 +295,53 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       href: "https://aistudio.google.com/app/apikey",
     });
     link.setAttr("target", "_blank");
+
+    // Auto-fetch models if API key is set
+    if (this.plugin.settings.geminiApiKey && this.geminiModels.length === 0) {
+      this.refreshGeminiModels();
+    }
+  }
+
+  /**
+   * Refresh Gemini models from API
+   */
+  private async refreshGeminiModels(): Promise<void> {
+    if (!this.plugin.settings.geminiApiKey) {
+      this.geminiModels = ModelFetcher.getFallbackGeminiModels();
+    } else {
+      const models = await ModelFetcher.fetchGeminiModels(this.plugin.settings.geminiApiKey);
+      this.geminiModels = models.length > 0 ? models : ModelFetcher.getFallbackGeminiModels();
+    }
+
+    if (this.geminiDropdown) {
+      const currentValue = this.geminiDropdown.getValue();
+      this.populateGeminiDropdown(this.geminiDropdown);
+      // Restore selection if still valid, otherwise use first model
+      const validModel = this.geminiModels.find(m => m.id === currentValue);
+      if (validModel) {
+        this.geminiDropdown.setValue(currentValue);
+      } else if (this.geminiModels.length > 0) {
+        this.geminiDropdown.setValue(this.geminiModels[0].id);
+        this.plugin.settings.geminiModelId = this.geminiModels[0].id;
+        await this.plugin.saveSettings();
+      }
+    }
+  }
+
+  /**
+   * Populate Gemini dropdown with models
+   */
+  private populateGeminiDropdown(dropdown: DropdownComponent): void {
+    // Clear existing options
+    dropdown.selectEl.empty();
+
+    const models = this.geminiModels.length > 0
+      ? this.geminiModels
+      : ModelFetcher.getFallbackGeminiModels();
+
+    for (const model of models) {
+      dropdown.addOption(model.id, model.name);
+    }
   }
 
   /**
@@ -311,24 +373,36 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.groqApiKey = value;
             await this.plugin.saveSettings();
+            // Refresh models when API key changes
+            this.refreshGroqModels();
           });
         text.inputEl.type = "password";
         return text;
       });
 
-    new Setting(section)
+    const modelSetting = new Setting(section)
       .setName("Model")
-      .setDesc("Select the Groq model to use")
+      .setDesc("Select the Groq model to use (fetched from API)")
       .addDropdown((dropdown) => {
-        for (const [value, label] of Object.entries(GROQ_MODELS)) {
-          dropdown.addOption(value, label);
-        }
+        this.groqDropdown = dropdown;
+        this.populateGroqDropdown(dropdown);
         dropdown.setValue(this.plugin.settings.groqModelId);
         dropdown.onChange(async (value) => {
           this.plugin.settings.groqModelId = value;
           await this.plugin.saveSettings();
         });
-      });
+      })
+      .addButton((button) =>
+        button
+          .setIcon("refresh-cw")
+          .setTooltip("Refresh models from API")
+          .onClick(async () => {
+            button.setDisabled(true);
+            await this.refreshGroqModels();
+            button.setDisabled(false);
+            new Notice("Groq models refreshed");
+          })
+      );
 
     // Test Connection Button
     new Setting(section)
@@ -350,6 +424,53 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       href: "https://console.groq.com/keys",
     });
     link.setAttr("target", "_blank");
+
+    // Auto-fetch models if API key is set
+    if (this.plugin.settings.groqApiKey && this.groqModels.length === 0) {
+      this.refreshGroqModels();
+    }
+  }
+
+  /**
+   * Refresh Groq models from API
+   */
+  private async refreshGroqModels(): Promise<void> {
+    if (!this.plugin.settings.groqApiKey) {
+      this.groqModels = ModelFetcher.getFallbackGroqModels();
+    } else {
+      const models = await ModelFetcher.fetchGroqModels(this.plugin.settings.groqApiKey);
+      this.groqModels = models.length > 0 ? models : ModelFetcher.getFallbackGroqModels();
+    }
+
+    if (this.groqDropdown) {
+      const currentValue = this.groqDropdown.getValue();
+      this.populateGroqDropdown(this.groqDropdown);
+      // Restore selection if still valid, otherwise use first model
+      const validModel = this.groqModels.find(m => m.id === currentValue);
+      if (validModel) {
+        this.groqDropdown.setValue(currentValue);
+      } else if (this.groqModels.length > 0) {
+        this.groqDropdown.setValue(this.groqModels[0].id);
+        this.plugin.settings.groqModelId = this.groqModels[0].id;
+        await this.plugin.saveSettings();
+      }
+    }
+  }
+
+  /**
+   * Populate Groq dropdown with models
+   */
+  private populateGroqDropdown(dropdown: DropdownComponent): void {
+    // Clear existing options
+    dropdown.selectEl.empty();
+
+    const models = this.groqModels.length > 0
+      ? this.groqModels
+      : ModelFetcher.getFallbackGroqModels();
+
+    for (const model of models) {
+      dropdown.addOption(model.id, model.name);
+    }
   }
 
   /**

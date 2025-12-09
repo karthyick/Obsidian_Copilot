@@ -4,15 +4,47 @@ import {
   setIcon,
   MarkdownRenderer,
   Notice,
+  TFile,
+  FuzzySuggestModal,
+  App,
 } from "obsidian";
 import type AIAssistantPlugin from "./main";
 import {
   ChatMessage,
   VIEW_TYPE_AI_ASSISTANT,
   LLMMessage,
+  BEDROCK_MODELS,
+  PROVIDER_NAMES,
+  AIProvider,
 } from "./types";
 import { EditProtocol } from "./editProtocol";
 import { MermaidHandler } from "./mermaidHandler";
+import { ModelFetcher } from "./modelFetcher";
+
+/**
+ * Note suggester modal for @mentions
+ */
+class NoteSuggesterModal extends FuzzySuggestModal<TFile> {
+  private onSelect: (file: TFile) => void;
+
+  constructor(app: App, onSelect: (file: TFile) => void) {
+    super(app);
+    this.onSelect = onSelect;
+    this.setPlaceholder("Search for a note to reference...");
+  }
+
+  getItems(): TFile[] {
+    return this.app.vault.getMarkdownFiles();
+  }
+
+  getItemText(item: TFile): string {
+    return item.path;
+  }
+
+  onChooseItem(item: TFile): void {
+    this.onSelect(item);
+  }
+}
 
 /**
  * Chat view for the AI Assistant
@@ -24,11 +56,15 @@ export class AIChatView extends ItemView {
   private inputContainer: HTMLElement;
   private inputTextarea: HTMLTextAreaElement;
   private sendButton: HTMLButtonElement;
-  private contextToggle: HTMLInputElement;
-  private contextInfo: HTMLElement;
   private isLoading: boolean = false;
   private editProtocol: EditProtocol;
   private mermaidHandler: MermaidHandler;
+  private modelSelector: HTMLSelectElement;
+  private providerSelector: HTMLSelectElement;
+  private referencedNotes: TFile[] = [];
+  private referencedNotesContainer: HTMLElement;
+  private contextToggle: HTMLInputElement;
+  private activeNoteDisplay: HTMLElement;
 
   constructor(leaf: WorkspaceLeaf, plugin: AIAssistantPlugin) {
     super(leaf);
@@ -50,119 +86,247 @@ export class AIChatView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    const container = this.containerEl.children[1];
+    const container = this.containerEl.children[1] as HTMLElement;
     container.empty();
     container.addClass("ai-assistant-container");
 
-    // Create header
-    this.createHeader(container as HTMLElement);
+    // Create header with model selector
+    this.createHeader(container);
 
     // Create messages container
     this.messagesContainer = container.createDiv({
       cls: "ai-assistant-messages",
     });
 
-    // Create context info bar
-    this.createContextBar(container as HTMLElement);
-
-    // Create input area
-    this.createInputArea(container as HTMLElement);
+    // Create input area (modern design)
+    this.createInputArea(container);
 
     // Add welcome message
     this.addWelcomeMessage();
 
-    // Update context info
-    await this.updateContextInfo();
+    // Register for active leaf changes to update context
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        this.updateActiveNoteDisplay();
+      })
+    );
+
+    // Initial update
+    this.updateActiveNoteDisplay();
   }
 
   async onClose(): Promise<void> {
-    // Cleanup if needed
+    // Cleanup
   }
 
   /**
-   * Create the header section
+   * Create the header section with model selector
    */
   private createHeader(container: HTMLElement): void {
     const header = container.createDiv({ cls: "ai-assistant-header" });
 
-    const title = header.createDiv({ cls: "ai-assistant-title" });
-    title.createSpan({ text: "AI Assistant" });
+    // Left side - Title and provider/model selectors
+    const headerLeft = header.createDiv({ cls: "ai-assistant-header-left" });
 
-    const actions = header.createDiv({ cls: "ai-assistant-header-actions" });
+    const titleRow = headerLeft.createDiv({ cls: "ai-assistant-title-row" });
+    const logoIcon = titleRow.createSpan({ cls: "ai-assistant-logo" });
+    setIcon(logoIcon, "bot");
+    titleRow.createSpan({ text: "AI Assistant", cls: "ai-assistant-title-text" });
+
+    // Provider and Model selectors row
+    const selectorsRow = headerLeft.createDiv({ cls: "ai-assistant-selectors" });
+
+    // Provider selector
+    const providerGroup = selectorsRow.createDiv({ cls: "ai-assistant-selector-group" });
+    providerGroup.createSpan({ text: "Provider:", cls: "ai-assistant-selector-label" });
+    this.providerSelector = providerGroup.createEl("select", {
+      cls: "ai-assistant-provider-select",
+    });
+
+    for (const [value, label] of Object.entries(PROVIDER_NAMES)) {
+      const option = this.providerSelector.createEl("option", {
+        value,
+        text: label,
+      });
+      if (value === this.plugin.settings.provider) {
+        option.selected = true;
+      }
+    }
+
+    this.providerSelector.addEventListener("change", async () => {
+      this.plugin.settings.provider = this.providerSelector.value as AIProvider;
+      await this.plugin.saveSettings();
+      this.plugin.reinitializeLLMService();
+      this.updateModelSelector();
+    });
+
+    // Model selector
+    const modelGroup = selectorsRow.createDiv({ cls: "ai-assistant-selector-group" });
+    modelGroup.createSpan({ text: "Model:", cls: "ai-assistant-selector-label" });
+    this.modelSelector = modelGroup.createEl("select", {
+      cls: "ai-assistant-model-select",
+    });
+    this.updateModelSelector();
+
+    this.modelSelector.addEventListener("change", async () => {
+      const provider = this.plugin.settings.provider;
+      if (provider === "bedrock") {
+        this.plugin.settings.bedrockModelId = this.modelSelector.value;
+      } else if (provider === "gemini") {
+        this.plugin.settings.geminiModelId = this.modelSelector.value;
+      } else if (provider === "groq") {
+        this.plugin.settings.groqModelId = this.modelSelector.value;
+      }
+      await this.plugin.saveSettings();
+    });
+
+    // Right side - Actions
+    const headerRight = header.createDiv({ cls: "ai-assistant-header-actions" });
+
+    // New chat button
+    const newChatBtn = headerRight.createEl("button", {
+      cls: "ai-assistant-header-btn",
+      attr: { "aria-label": "New chat" },
+    });
+    setIcon(newChatBtn, "plus");
+    newChatBtn.addEventListener("click", () => this.clearChat());
 
     // Settings button
-    const settingsBtn = actions.createEl("button", {
+    const settingsBtn = headerRight.createEl("button", {
       cls: "ai-assistant-header-btn",
       attr: { "aria-label": "Settings" },
     });
     setIcon(settingsBtn, "settings");
     settingsBtn.addEventListener("click", () => {
-      // Open plugin settings
       (this.app as any).setting.open();
       (this.app as any).setting.openTabById(this.plugin.manifest.id);
     });
-
-    // Clear chat button
-    const clearBtn = actions.createEl("button", {
-      cls: "ai-assistant-header-btn",
-      attr: { "aria-label": "Clear chat" },
-    });
-    setIcon(clearBtn, "trash-2");
-    clearBtn.addEventListener("click", () => this.clearChat());
   }
 
   /**
-   * Create the context info bar
+   * Update model selector based on current provider
    */
-  private createContextBar(container: HTMLElement): void {
-    const contextBar = container.createDiv({ cls: "ai-assistant-context-bar" });
+  private async updateModelSelector(): Promise<void> {
+    this.modelSelector.empty();
+    const provider = this.plugin.settings.provider;
 
-    this.contextInfo = contextBar.createDiv({ cls: "ai-assistant-context-info" });
+    let models: { id: string; name: string }[] = [];
+    let currentModelId = "";
 
-    const clearContextBtn = contextBar.createEl("button", {
-      cls: "ai-assistant-context-clear",
-      attr: { "aria-label": "Clear context" },
-    });
-    setIcon(clearContextBtn, "x");
-    clearContextBtn.addEventListener("click", () => {
-      this.contextToggle.checked = false;
-      this.updateContextInfo();
-    });
+    if (provider === "bedrock") {
+      models = Object.entries(BEDROCK_MODELS).map(([id, name]) => ({ id, name }));
+      currentModelId = this.plugin.settings.bedrockModelId;
+    } else if (provider === "gemini") {
+      if (this.plugin.settings.geminiApiKey) {
+        const fetchedModels = await ModelFetcher.fetchGeminiModels(this.plugin.settings.geminiApiKey);
+        models = fetchedModels.length > 0 ? fetchedModels : ModelFetcher.getFallbackGeminiModels();
+      } else {
+        models = ModelFetcher.getFallbackGeminiModels();
+      }
+      currentModelId = this.plugin.settings.geminiModelId;
+    } else if (provider === "groq") {
+      if (this.plugin.settings.groqApiKey) {
+        const fetchedModels = await ModelFetcher.fetchGroqModels(this.plugin.settings.groqApiKey);
+        models = fetchedModels.length > 0 ? fetchedModels : ModelFetcher.getFallbackGroqModels();
+      } else {
+        models = ModelFetcher.getFallbackGroqModels();
+      }
+      currentModelId = this.plugin.settings.groqModelId;
+    }
+
+    // If saved model ID is not in the fetched list, add it at the top
+    // This ensures user's saved model is always available
+    const modelExists = models.some(m => m.id === currentModelId);
+    if (currentModelId && !modelExists) {
+      models.unshift({ id: currentModelId, name: `${currentModelId} (saved)` });
+    }
+
+    let selectedFound = false;
+    for (const model of models) {
+      const option = this.modelSelector.createEl("option", {
+        value: model.id,
+        text: model.name,
+      });
+      if (model.id === currentModelId) {
+        option.selected = true;
+        selectedFound = true;
+      }
+    }
+
+    // If no model was selected (edge case), select first one and save
+    if (!selectedFound && models.length > 0) {
+      this.modelSelector.selectedIndex = 0;
+      const firstModelId = models[0].id;
+      if (provider === "bedrock") {
+        this.plugin.settings.bedrockModelId = firstModelId;
+      } else if (provider === "gemini") {
+        this.plugin.settings.geminiModelId = firstModelId;
+      } else if (provider === "groq") {
+        this.plugin.settings.groqModelId = firstModelId;
+      }
+      await this.plugin.saveSettings();
+    }
   }
 
   /**
-   * Create the input area
+   * Create the input area with modern design
    */
   private createInputArea(container: HTMLElement): void {
-    this.inputContainer = container.createDiv({ cls: "ai-assistant-input-area" });
+    this.inputContainer = container.createDiv({ cls: "ai-assistant-input-wrapper" });
 
-    // Context toggle
-    const toggleContainer = this.inputContainer.createDiv({
-      cls: "ai-assistant-toggle-container",
-    });
+    // Context section
+    const contextSection = this.inputContainer.createDiv({ cls: "ai-assistant-context-section" });
 
-    const toggleLabel = toggleContainer.createEl("label", {
-      cls: "ai-assistant-toggle-label",
-    });
+    // Active note display
+    const activeNoteRow = contextSection.createDiv({ cls: "ai-assistant-active-note-row" });
 
-    this.contextToggle = toggleLabel.createEl("input", {
+    // Toggle for including active note
+    const toggleWrapper = activeNoteRow.createDiv({ cls: "ai-assistant-toggle-wrapper" });
+    this.contextToggle = toggleWrapper.createEl("input", {
       type: "checkbox",
-      cls: "ai-assistant-toggle",
+      cls: "ai-assistant-context-toggle",
     });
     this.contextToggle.checked = this.plugin.settings.autoIncludeContext;
-    this.contextToggle.addEventListener("change", () => this.updateContextInfo());
+    this.contextToggle.id = "context-toggle";
 
-    toggleLabel.createSpan({ text: "Include active note" });
+    const toggleLabel = toggleWrapper.createEl("label", {
+      attr: { for: "context-toggle" },
+      cls: "ai-assistant-toggle-label-modern",
+    });
+    toggleLabel.createSpan({ cls: "ai-assistant-toggle-slider" });
 
-    // Input row
-    const inputRow = this.inputContainer.createDiv({
-      cls: "ai-assistant-input-row",
+    this.activeNoteDisplay = activeNoteRow.createDiv({ cls: "ai-assistant-active-note-display" });
+    this.updateActiveNoteDisplay();
+
+    this.contextToggle.addEventListener("change", async () => {
+      this.plugin.settings.autoIncludeContext = this.contextToggle.checked;
+      await this.plugin.saveSettings();
+      this.updateActiveNoteDisplay();
     });
 
-    this.inputTextarea = inputRow.createEl("textarea", {
-      cls: "ai-assistant-input",
+    // Referenced notes section
+    const referencesRow = contextSection.createDiv({ cls: "ai-assistant-references-row" });
+
+    const addRefBtn = referencesRow.createEl("button", {
+      cls: "ai-assistant-add-ref-btn",
+      attr: { "aria-label": "Add note reference" },
+    });
+    setIcon(addRefBtn, "file-plus");
+    addRefBtn.createSpan({ text: "Add Note Reference" });
+    addRefBtn.addEventListener("click", () => this.openNoteSuggester());
+
+    this.referencedNotesContainer = referencesRow.createDiv({ cls: "ai-assistant-referenced-notes" });
+
+    // Input area
+    const inputArea = this.inputContainer.createDiv({ cls: "ai-assistant-input-area-modern" });
+
+    // Textarea container
+    const textareaContainer = inputArea.createDiv({ cls: "ai-assistant-textarea-container" });
+
+    this.inputTextarea = textareaContainer.createEl("textarea", {
+      cls: "ai-assistant-input-modern",
       attr: {
-        placeholder: "Ask anything or request changes to your note...",
+        placeholder: "Ask me anything about your notes...",
         rows: "1",
       },
     });
@@ -170,25 +334,123 @@ export class AIChatView extends ItemView {
     // Auto-resize textarea
     this.inputTextarea.addEventListener("input", () => {
       this.inputTextarea.style.height = "auto";
-      this.inputTextarea.style.height =
-        Math.min(this.inputTextarea.scrollHeight, 150) + "px";
+      const newHeight = Math.min(Math.max(this.inputTextarea.scrollHeight, 44), 200);
+      this.inputTextarea.style.height = newHeight + "px";
+    });
+
+    // Handle @ mentions
+    this.inputTextarea.addEventListener("input", (e) => {
+      const value = this.inputTextarea.value;
+      const cursorPos = this.inputTextarea.selectionStart;
+      const textBeforeCursor = value.substring(0, cursorPos);
+
+      // Check if user just typed @
+      if (textBeforeCursor.endsWith("@")) {
+        this.openNoteSuggester();
+      }
     });
 
     // Handle keyboard shortcuts
     this.inputTextarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         this.sendMessage();
       }
     });
 
     // Send button
-    this.sendButton = inputRow.createEl("button", {
-      cls: "ai-assistant-send-btn",
+    this.sendButton = inputArea.createEl("button", {
+      cls: "ai-assistant-send-btn-modern",
       attr: { "aria-label": "Send message" },
     });
-    setIcon(this.sendButton, "send");
+    const sendIcon = this.sendButton.createSpan({ cls: "ai-assistant-send-icon" });
+    setIcon(sendIcon, "send");
     this.sendButton.addEventListener("click", () => this.sendMessage());
+
+    // Hint text
+    const hintText = this.inputContainer.createDiv({ cls: "ai-assistant-hint" });
+    hintText.createSpan({ text: "Press Enter to send • Shift+Enter for new line • @ to reference notes" });
+  }
+
+  /**
+   * Update active note display
+   */
+  private updateActiveNoteDisplay(): void {
+    if (!this.activeNoteDisplay) return;
+
+    this.activeNoteDisplay.empty();
+
+    if (!this.contextToggle.checked) {
+      this.activeNoteDisplay.createSpan({
+        text: "Active note not included",
+        cls: "ai-assistant-note-disabled"
+      });
+      return;
+    }
+
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile) {
+      const noteTag = this.activeNoteDisplay.createDiv({ cls: "ai-assistant-note-tag" });
+      const icon = noteTag.createSpan({ cls: "ai-assistant-note-icon" });
+      setIcon(icon, "file-text");
+      noteTag.createSpan({ text: activeFile.basename, cls: "ai-assistant-note-name" });
+    } else {
+      this.activeNoteDisplay.createSpan({
+        text: "No note open",
+        cls: "ai-assistant-note-disabled"
+      });
+    }
+  }
+
+  /**
+   * Open note suggester modal
+   */
+  private openNoteSuggester(): void {
+    new NoteSuggesterModal(this.app, (file) => {
+      this.addReferencedNote(file);
+    }).open();
+  }
+
+  /**
+   * Add a referenced note
+   */
+  private addReferencedNote(file: TFile): void {
+    // Don't add duplicates
+    if (this.referencedNotes.some(n => n.path === file.path)) {
+      return;
+    }
+
+    this.referencedNotes.push(file);
+    this.renderReferencedNotes();
+  }
+
+  /**
+   * Remove a referenced note
+   */
+  private removeReferencedNote(file: TFile): void {
+    this.referencedNotes = this.referencedNotes.filter(n => n.path !== file.path);
+    this.renderReferencedNotes();
+  }
+
+  /**
+   * Render referenced notes tags
+   */
+  private renderReferencedNotes(): void {
+    this.referencedNotesContainer.empty();
+
+    for (const file of this.referencedNotes) {
+      const tag = this.referencedNotesContainer.createDiv({ cls: "ai-assistant-ref-tag" });
+      const icon = tag.createSpan({ cls: "ai-assistant-ref-icon" });
+      setIcon(icon, "file-text");
+      tag.createSpan({ text: file.basename, cls: "ai-assistant-ref-name" });
+
+      const removeBtn = tag.createSpan({ cls: "ai-assistant-ref-remove" });
+      setIcon(removeBtn, "x");
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.removeReferencedNote(file);
+      });
+    }
   }
 
   /**
@@ -196,53 +458,38 @@ export class AIChatView extends ItemView {
    */
   private addWelcomeMessage(): void {
     const welcomeDiv = this.messagesContainer.createDiv({
-      cls: "ai-assistant-welcome",
+      cls: "ai-assistant-welcome-modern",
     });
 
-    welcomeDiv.createEl("h3", { text: "👋 Welcome to AI Assistant" });
+    const logoContainer = welcomeDiv.createDiv({ cls: "ai-assistant-welcome-logo" });
+    setIcon(logoContainer, "bot");
+
+    welcomeDiv.createEl("h2", { text: "How can I help you today?" });
     welcomeDiv.createEl("p", {
-      text: "I can help you with your notes. Try asking me to:",
+      text: "I can help you write, edit, and analyze your notes. Try one of these:",
+      cls: "ai-assistant-welcome-subtitle",
     });
 
-    const suggestions = welcomeDiv.createEl("ul");
-    const suggestionItems = [
-      "Summarize this note",
-      "Fix grammar and spelling",
-      "Add a conclusion section",
-      "Create a Mermaid diagram",
-      "Expand on a topic",
+    const suggestionsGrid = welcomeDiv.createDiv({ cls: "ai-assistant-suggestions-grid" });
+
+    const suggestions = [
+      { icon: "file-text", text: "Summarize this note", desc: "Get a quick summary" },
+      { icon: "spell-check", text: "Fix grammar and spelling", desc: "Polish your writing" },
+      { icon: "list-plus", text: "Add a conclusion", desc: "Complete your note" },
+      { icon: "git-branch", text: "Create a diagram", desc: "Visualize concepts" },
     ];
 
-    for (const item of suggestionItems) {
-      const li = suggestions.createEl("li");
-      const link = li.createEl("a", {
-        text: item,
-        cls: "ai-assistant-suggestion",
-      });
-      link.addEventListener("click", () => {
-        this.inputTextarea.value = item;
+    for (const suggestion of suggestions) {
+      const card = suggestionsGrid.createDiv({ cls: "ai-assistant-suggestion-card" });
+      const iconEl = card.createDiv({ cls: "ai-assistant-suggestion-icon" });
+      setIcon(iconEl, suggestion.icon);
+      card.createDiv({ text: suggestion.text, cls: "ai-assistant-suggestion-text" });
+      card.createDiv({ text: suggestion.desc, cls: "ai-assistant-suggestion-desc" });
+
+      card.addEventListener("click", () => {
+        this.inputTextarea.value = suggestion.text;
         this.inputTextarea.focus();
       });
-    }
-  }
-
-  /**
-   * Update the context info display
-   */
-  private async updateContextInfo(): Promise<void> {
-    if (!this.contextToggle.checked) {
-      this.contextInfo.setText("No context attached");
-      this.contextInfo.addClass("ai-assistant-context-none");
-      return;
-    }
-
-    const summary = await this.plugin.contextBuilder.getContextSummary();
-    if (summary) {
-      this.contextInfo.setText(summary);
-      this.contextInfo.removeClass("ai-assistant-context-none");
-    } else {
-      this.contextInfo.setText("No active note");
-      this.contextInfo.addClass("ai-assistant-context-none");
     }
   }
 
@@ -262,7 +509,7 @@ export class AIChatView extends ItemView {
     }
 
     // Remove welcome message
-    const welcome = this.messagesContainer.querySelector(".ai-assistant-welcome");
+    const welcome = this.messagesContainer.querySelector(".ai-assistant-welcome-modern");
     if (welcome) {
       welcome.remove();
     }
@@ -284,10 +531,20 @@ export class AIChatView extends ItemView {
     ) as HTMLElement;
 
     try {
-      // Build messages for Bedrock
+      // Build context including referenced notes
+      let contextMessage = message;
+
+      // Add referenced notes content
+      if (this.referencedNotes.length > 0) {
+        contextMessage = await this.buildReferencedNotesContext() + "\n\nUser Request: " + message;
+      }
+
+      // Build messages - limit to last 10 messages for context continuity
+      const historyWithoutCurrent = this.chatHistory.slice(0, -1);
+      const recentHistory = historyWithoutCurrent.slice(-10); // Keep last 10 messages (5 exchanges)
       const messages = await this.plugin.contextBuilder.buildMessages(
-        this.chatHistory.slice(0, -1), // Exclude the empty assistant message
-        message,
+        recentHistory,
+        contextMessage,
         this.contextToggle.checked
       );
 
@@ -298,7 +555,6 @@ export class AIChatView extends ItemView {
       let fullResponse = "";
 
       if (this.plugin.settings.streamResponses) {
-        // Stream response
         const stream = this.plugin.llmService.sendMessageStream(
           messages,
           systemPrompt
@@ -311,7 +567,6 @@ export class AIChatView extends ItemView {
           this.scrollToBottom();
         }
       } else {
-        // Non-streaming response
         fullResponse = await this.plugin.llmService.sendMessage(
           messages,
           systemPrompt
@@ -326,18 +581,73 @@ export class AIChatView extends ItemView {
       assistantMessage.mermaidBlocks =
         this.mermaidHandler.extractMermaidCode(fullResponse);
 
-      // Add action buttons if needed
+      // Add action buttons
       this.addMessageActions(messageEl, assistantMessage);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
-      assistantMessage.content = `❌ Error: ${errorMessage}`;
-      contentEl.setText(assistantMessage.content);
+      const rawError = error instanceof Error ? error.message : String(error);
+
+      // Parse and display user-friendly error messages
+      let errorMessage = rawError;
+      let errorDetails = "";
+
+      if (rawError.includes("401") || rawError.includes("Unauthorized") || rawError.includes("invalid_api_key")) {
+        errorMessage = "Authentication Failed";
+        errorDetails = "Your API key is invalid or expired. Please check your API key in the plugin settings.";
+      } else if (rawError.includes("403") || rawError.includes("Forbidden") || rawError.includes("access")) {
+        errorMessage = "Model Access Denied";
+        errorDetails = `You don't have access to the selected model. Try switching to a different model from the dropdown above, or check your API permissions.`;
+      } else if (rawError.includes("404") || rawError.includes("not found")) {
+        errorMessage = "Model Not Found";
+        errorDetails = "The selected model doesn't exist or is not available. Please select a different model.";
+      } else if (rawError.includes("429") || rawError.includes("rate limit") || rawError.includes("quota")) {
+        errorMessage = "Rate Limit Exceeded";
+        errorDetails = "You've exceeded the API rate limit. Please wait a moment and try again.";
+      } else if (rawError.includes("500") || rawError.includes("502") || rawError.includes("503")) {
+        errorMessage = "Server Error";
+        errorDetails = "The AI service is temporarily unavailable. Please try again later.";
+      } else if (rawError.includes("timeout") || rawError.includes("ETIMEDOUT")) {
+        errorMessage = "Request Timeout";
+        errorDetails = "The request took too long. Please try again with a shorter message.";
+      } else if (rawError.includes("network") || rawError.includes("ENOTFOUND") || rawError.includes("fetch")) {
+        errorMessage = "Network Error";
+        errorDetails = "Unable to connect to the AI service. Please check your internet connection.";
+      }
+
+      // Format the error display
+      const errorContent = errorDetails
+        ? `**⚠️ ${errorMessage}**\n\n${errorDetails}\n\n<details><summary>Technical Details</summary>\n\n\`\`\`\n${rawError}\n\`\`\`\n</details>`
+        : `**⚠️ Error:** ${rawError}`;
+
+      assistantMessage.content = errorContent;
+      await this.updateMessageContent(contentEl, errorContent);
       contentEl.addClass("ai-assistant-error");
     } finally {
       this.setLoading(false);
       this.scrollToBottom();
     }
+  }
+
+  /**
+   * Build context from referenced notes
+   */
+  private async buildReferencedNotesContext(): Promise<string> {
+    const parts: string[] = [];
+    parts.push("=== ADDITIONAL REFERENCED NOTES ===");
+    parts.push("(The user has explicitly referenced these notes for context. Use this information to answer their question.)\n");
+
+    for (let i = 0; i < this.referencedNotes.length; i++) {
+      const file = this.referencedNotes[i];
+      const content = await this.app.vault.read(file);
+      parts.push(`### Referenced Note ${i + 1}: "${file.basename}"`);
+      parts.push(`Path: ${file.path}`);
+      parts.push("Content:");
+      parts.push("```markdown");
+      parts.push(content.substring(0, 8000)); // Limit each note to ~2000 tokens
+      parts.push("```\n");
+    }
+
+    parts.push("=== END REFERENCED NOTES ===\n");
+    return parts.join("\n");
   }
 
   /**
@@ -366,7 +676,17 @@ export class AIChatView extends ItemView {
       cls: `ai-assistant-message ai-assistant-message-${message.role}`,
     });
 
-    const bubble = messageEl.createDiv({ cls: "ai-assistant-bubble" });
+    // Avatar
+    const avatar = messageEl.createDiv({ cls: "ai-assistant-avatar" });
+    if (message.role === "assistant") {
+      setIcon(avatar, "bot");
+    } else {
+      setIcon(avatar, "user");
+    }
+
+    const messageContent = messageEl.createDiv({ cls: "ai-assistant-message-wrapper" });
+
+    const bubble = messageContent.createDiv({ cls: "ai-assistant-bubble" });
 
     const contentEl = bubble.createDiv({
       cls: "ai-assistant-message-content",
@@ -375,17 +695,38 @@ export class AIChatView extends ItemView {
     if (message.content) {
       this.updateMessageContent(contentEl, message.content);
     } else if (isStreaming) {
-      contentEl.createDiv({ cls: "ai-assistant-typing" });
+      const typingIndicator = contentEl.createDiv({ cls: "ai-assistant-typing-modern" });
+      typingIndicator.createSpan({ cls: "ai-assistant-typing-dot" });
+      typingIndicator.createSpan({ cls: "ai-assistant-typing-dot" });
+      typingIndicator.createSpan({ cls: "ai-assistant-typing-dot" });
     }
 
-    // Add timestamp
-    const meta = bubble.createDiv({ cls: "ai-assistant-message-meta" });
+    // Timestamp and actions row
+    const metaRow = messageContent.createDiv({ cls: "ai-assistant-message-meta-row" });
+
+    const meta = metaRow.createDiv({ cls: "ai-assistant-message-meta" });
     meta.createSpan({
       text: message.timestamp.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
     });
+
+    // Add copy button for user messages
+    if (message.role === "user" && message.content) {
+      const userActions = metaRow.createDiv({ cls: "ai-assistant-user-actions" });
+      const copyBtn = userActions.createEl("button", {
+        cls: "ai-assistant-action-btn-small",
+        attr: { "aria-label": "Copy message" },
+      });
+      setIcon(copyBtn, "copy");
+      copyBtn.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(message.content);
+        setIcon(copyBtn, "check");
+        new Notice("Copied to clipboard");
+        setTimeout(() => setIcon(copyBtn, "copy"), 2000);
+      });
+    }
 
     this.scrollToBottom();
     return messageEl;
@@ -400,10 +741,8 @@ export class AIChatView extends ItemView {
   ): Promise<void> {
     contentEl.empty();
 
-    // Get display text (without edit command blocks)
     const displayText = this.editProtocol.getDisplayText(content);
 
-    // Render markdown
     await MarkdownRenderer.render(
       this.app,
       displayText,
@@ -437,18 +776,17 @@ export class AIChatView extends ItemView {
     messageEl: HTMLElement,
     message: ChatMessage
   ): void {
-    const bubble = messageEl.querySelector(".ai-assistant-bubble");
-    if (!bubble) return;
+    const wrapper = messageEl.querySelector(".ai-assistant-message-wrapper");
+    if (!wrapper) return;
 
-    const actionsEl = bubble.createDiv({ cls: "ai-assistant-message-actions" });
+    const actionsEl = wrapper.createDiv({ cls: "ai-assistant-message-actions" });
 
     // Copy button
     const copyBtn = actionsEl.createEl("button", {
-      cls: "ai-assistant-action-btn",
-      attr: { "aria-label": "Copy response" },
+      cls: "ai-assistant-action-btn-modern",
+      attr: { "aria-label": "Copy" },
     });
     setIcon(copyBtn, "copy");
-    copyBtn.createSpan({ text: "Copy" });
     copyBtn.addEventListener("click", async () => {
       const displayText = this.editProtocol.getDisplayText(message.content);
       await navigator.clipboard.writeText(displayText);
@@ -457,11 +795,10 @@ export class AIChatView extends ItemView {
 
     // Insert button
     const insertBtn = actionsEl.createEl("button", {
-      cls: "ai-assistant-action-btn",
+      cls: "ai-assistant-action-btn-modern",
       attr: { "aria-label": "Insert at cursor" },
     });
     setIcon(insertBtn, "file-input");
-    insertBtn.createSpan({ text: "Insert" });
     insertBtn.addEventListener("click", () => {
       const displayText = this.editProtocol.getDisplayText(message.content);
       if (this.plugin.noteController.insertAtCursor(displayText)) {
@@ -471,22 +808,19 @@ export class AIChatView extends ItemView {
       }
     });
 
-    // Apply edit button (if edit commands present)
+    // Apply edit button
     if (message.editCommands && message.editCommands.length > 0) {
       const applyBtn = actionsEl.createEl("button", {
-        cls: "ai-assistant-action-btn ai-assistant-action-apply",
+        cls: "ai-assistant-action-btn-modern ai-assistant-action-apply",
         attr: { "aria-label": "Apply edit" },
       });
 
       if (message.applied) {
         setIcon(applyBtn, "check-circle");
-        applyBtn.createSpan({ text: "Applied" });
         applyBtn.disabled = true;
         applyBtn.addClass("ai-assistant-action-applied");
       } else {
         setIcon(applyBtn, "edit");
-        applyBtn.createSpan({ text: "Apply Edit" });
-
         applyBtn.addEventListener("click", async () => {
           const results = await this.editProtocol.executeCommands(
             message.editCommands!
@@ -496,8 +830,6 @@ export class AIChatView extends ItemView {
           if (allSuccess) {
             message.applied = true;
             setIcon(applyBtn, "check-circle");
-            const textSpan = applyBtn.querySelector("span");
-            if (textSpan) textSpan.setText("Applied");
             applyBtn.disabled = true;
             applyBtn.addClass("ai-assistant-action-applied");
             new Notice("Edit applied successfully");
@@ -509,15 +841,13 @@ export class AIChatView extends ItemView {
       }
     }
 
-    // Insert Mermaid button (if mermaid blocks present)
+    // Mermaid button
     if (message.mermaidBlocks && message.mermaidBlocks.length > 0) {
       const mermaidBtn = actionsEl.createEl("button", {
-        cls: "ai-assistant-action-btn",
+        cls: "ai-assistant-action-btn-modern",
         attr: { "aria-label": "Insert diagram" },
       });
       setIcon(mermaidBtn, "git-branch");
-      mermaidBtn.createSpan({ text: "Insert Diagram" });
-
       mermaidBtn.addEventListener("click", () => {
         for (const code of message.mermaidBlocks!) {
           if (this.plugin.noteController.insertMermaid(code)) {
@@ -557,7 +887,9 @@ export class AIChatView extends ItemView {
    */
   public clearChat(): void {
     this.chatHistory = [];
+    this.referencedNotes = [];
     this.messagesContainer.empty();
+    this.renderReferencedNotes();
     this.addWelcomeMessage();
     new Notice("Chat cleared");
   }
@@ -573,18 +905,20 @@ export class AIChatView extends ItemView {
    * Focus the input textarea
    */
   public focusInput(): void {
-    this.inputTextarea.focus();
+    this.inputTextarea?.focus();
   }
 
   /**
    * Set the input value and optionally send
    */
   public async setInputAndSend(message: string, send: boolean = false): Promise<void> {
-    this.inputTextarea.value = message;
-    if (send) {
-      await this.sendMessage();
-    } else {
-      this.inputTextarea.focus();
+    if (this.inputTextarea) {
+      this.inputTextarea.value = message;
+      if (send) {
+        await this.sendMessage();
+      } else {
+        this.inputTextarea.focus();
+      }
     }
   }
 }
