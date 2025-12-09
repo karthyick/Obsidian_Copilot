@@ -1,7 +1,44 @@
-/* AI Assistant Plugin Styles - Modern Design */
+/* AI Assistant Plugin Styles - Glassmorphism Design System */
 
 /* ============================================
-   Container Layout
+   CSS Variables - Glassmorphism Palette
+   ============================================ */
+
+.ai-assistant-container {
+  /* Gradients */
+  --ai-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --ai-gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --ai-gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  --ai-gradient-warning: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+  --ai-gradient-accent: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --ai-gradient-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  --ai-gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+
+  /* Glassmorphism */
+  --ai-glass-bg: rgba(255, 255, 255, 0.08);
+  --ai-glass-bg-hover: rgba(255, 255, 255, 0.12);
+  --ai-glass-bg-active: rgba(255, 255, 255, 0.15);
+  --ai-glass-border: rgba(255, 255, 255, 0.15);
+  --ai-glass-border-hover: rgba(255, 255, 255, 0.25);
+  --ai-glass-border-focus: rgba(102, 126, 234, 0.6);
+  --ai-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --ai-glass-blur: blur(12px);
+  --ai-glass-blur-strong: blur(20px);
+
+  /* Glows */
+  --ai-glow-primary: 0 0 20px rgba(102, 126, 234, 0.4);
+  --ai-glow-success: 0 0 20px rgba(56, 239, 125, 0.4);
+  --ai-glow-accent: 0 0 20px rgba(79, 172, 254, 0.4);
+  --ai-glow-white: 0 0 15px rgba(255, 255, 255, 0.2);
+
+  /* Shadows */
+  --ai-shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --ai-shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --ai-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   Container Layout - Glass Background
    ============================================ */
 
 .ai-assistant-container {
@@ -9,27 +46,55 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background-color: var(--background-primary);
+  background: var(--ai-gradient-dark);
+  position: relative;
+}
+
+.ai-assistant-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(79, 172, 254, 0.08) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 /* ============================================
-   Header - Modern Design
+   Header - Glassmorphism
    ============================================ */
 
 .ai-assistant-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  background: linear-gradient(180deg, var(--background-secondary) 0%, var(--background-primary) 100%);
-  gap: 12px;
+  padding: 16px 20px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur-strong);
+  -webkit-backdrop-filter: var(--ai-glass-blur-strong);
+  border-bottom: 1px solid var(--ai-glass-border);
+  gap: 16px;
+  position: relative;
+  z-index: 10;
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
+}
+
+.ai-assistant-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ai-gradient-primary);
+  opacity: 0.6;
 }
 
 .ai-assistant-header-left {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   flex: 1;
   min-width: 0;
 }
@@ -37,107 +102,181 @@
 .ai-assistant-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
+/* Logo - Glass with Gradient */
 .ai-assistant-logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--interactive-accent);
-  border-radius: 8px;
-  color: var(--text-on-accent);
+  width: 40px;
+  height: 40px;
+  background: var(--ai-gradient-primary);
+  border-radius: 12px;
+  color: white;
+  box-shadow: var(--ai-glow-primary), var(--ai-shadow-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-assistant-logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+}
+
+.ai-assistant-logo::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 70%
+  );
+  animation: logo-shimmer 3s infinite;
+}
+
+@keyframes logo-shimmer {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .ai-assistant-title-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-normal);
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--ai-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
 }
 
 .ai-assistant-selectors {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
 .ai-assistant-selector-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .ai-assistant-selector-label {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  font-weight: 600;
 }
 
+/* Dropdown Selects - Full Glassmorphism */
 .ai-assistant-provider-select,
 .ai-assistant-model-select {
-  padding: 4px 8px;
+  padding: 8px 14px;
   font-size: 12px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
+  font-weight: 500;
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 10px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  color: white;
   cursor: pointer;
-  max-width: 150px;
+  max-width: 170px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
 }
 
 .ai-assistant-provider-select:hover,
 .ai-assistant-model-select:hover {
-  border-color: var(--interactive-accent);
+  background: var(--ai-glass-bg-hover);
+  border-color: var(--ai-glass-border-hover);
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-white);
+  transform: translateY(-1px);
 }
 
 .ai-assistant-provider-select:focus,
 .ai-assistant-model-select:focus {
   outline: none;
-  border-color: var(--interactive-accent);
-  box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+  border-color: var(--ai-glass-border-focus);
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
+  background: var(--ai-glass-bg-active);
 }
 
+.ai-assistant-provider-select option,
+.ai-assistant-model-select option {
+  background: #1a1a2e;
+  color: white;
+  padding: 10px;
+}
+
+/* Header Action Buttons - Glass */
 .ai-assistant-header-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
 }
 
 .ai-assistant-header-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
+  padding: 10px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
 }
 
 .ai-assistant-header-btn:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+  background: var(--ai-glass-bg-hover);
+  border-color: var(--ai-glass-border-hover);
+  color: white;
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-white);
+  transform: translateY(-2px);
+}
+
+.ai-assistant-header-btn:active {
+  transform: translateY(0);
+  background: var(--ai-glass-bg-active);
 }
 
 /* ============================================
-   Messages Area
+   Messages Area - Glass Container
    ============================================ */
 
 .ai-assistant-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ============================================
-   Welcome Message - Modern Design
+   Welcome Message - Glassmorphism
    ============================================ */
 
 .ai-assistant-welcome-modern {
@@ -145,125 +284,223 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 48px 24px;
   text-align: center;
-  min-height: 300px;
+  min-height: 320px;
 }
 
 .ai-assistant-welcome-logo {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
-  border-radius: 16px;
+  width: 88px;
+  height: 88px;
+  background: var(--ai-gradient-primary);
+  border-radius: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-on-accent);
-  margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(var(--interactive-accent-rgb), 0.3);
+  color: white;
+  margin-bottom: 28px;
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
+  position: relative;
+  animation: welcome-float 3s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes welcome-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.ai-assistant-welcome-logo::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: var(--ai-gradient-primary);
+  border-radius: 32px;
+  z-index: -1;
+  opacity: 0.4;
+  filter: blur(15px);
+  animation: logo-pulse 2s ease-in-out infinite;
+}
+
+.ai-assistant-welcome-logo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+  border-radius: 28px;
+}
+
+@keyframes logo-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.08); }
 }
 
 .ai-assistant-welcome-logo svg {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  position: relative;
+  z-index: 1;
 }
 
 .ai-assistant-welcome-modern h2 {
-  margin: 0 0 8px 0;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--text-normal);
+  margin: 0 0 12px 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: var(--ai-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .ai-assistant-welcome-subtitle {
-  color: var(--text-muted);
-  margin-bottom: 24px;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 36px;
+  font-size: 15px;
+  max-width: 320px;
 }
 
+/* Suggestion Cards - Full Glass */
 .ai-assistant-suggestions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  max-width: 400px;
+  max-width: 460px;
 }
 
 .ai-assistant-suggestion-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 12px;
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 12px;
+  padding: 22px 18px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 18px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
+}
+
+.ai-assistant-suggestion-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ai-gradient-primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ai-assistant-suggestion-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .ai-assistant-suggestion-card:hover {
-  background-color: var(--background-secondary-alt);
-  border-color: var(--interactive-accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--ai-glass-border-focus);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
+}
+
+.ai-assistant-suggestion-card:hover::before {
+  opacity: 0.1;
 }
 
 .ai-assistant-suggestion-icon {
-  width: 36px;
-  height: 36px;
-  background-color: var(--background-primary);
-  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  background: var(--ai-gradient-primary);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
-  color: var(--interactive-accent);
+  margin-bottom: 14px;
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .ai-assistant-suggestion-text {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-normal);
-  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .ai-assistant-suggestion-desc {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  position: relative;
+  z-index: 1;
 }
 
 /* ============================================
-   Message Bubbles - Modern Design
+   Message Bubbles - Glassmorphism
    ============================================ */
 
 .ai-assistant-message {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   max-width: 100%;
+  animation: message-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes message-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ai-assistant-message-user {
   flex-direction: row-reverse;
 }
 
+/* Avatar - Glass */
 .ai-assistant-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--ai-shadow-soft);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.ai-assistant-avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  border-radius: 14px;
+  pointer-events: none;
 }
 
 .ai-assistant-message-assistant .ai-assistant-avatar {
-  background: linear-gradient(135deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
-  color: var(--text-on-accent);
+  background: var(--ai-gradient-primary);
+  color: white;
 }
 
 .ai-assistant-message-user .ai-assistant-avatar {
-  background-color: var(--background-modifier-border);
-  color: var(--text-muted);
+  background: var(--ai-gradient-accent);
+  color: white;
 }
 
 .ai-assistant-message-wrapper {
@@ -272,23 +509,39 @@
   max-width: 85%;
 }
 
+/* Message Bubble - Glass */
 .ai-assistant-bubble {
-  padding: 12px 16px;
-  border-radius: 16px;
+  padding: 16px 20px;
+  border-radius: 20px;
   position: relative;
+  box-shadow: var(--ai-shadow-soft);
 }
 
 .ai-assistant-message-user .ai-assistant-bubble {
-  background: linear-gradient(135deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
-  color: var(--text-on-accent);
-  border-bottom-right-radius: 4px;
+  background: var(--ai-gradient-primary);
+  color: white;
+  border-bottom-right-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ai-assistant-message-user .ai-assistant-bubble::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+  border-radius: 20px;
+  border-bottom-right-radius: 6px;
+  pointer-events: none;
 }
 
 .ai-assistant-message-assistant .ai-assistant-bubble {
-  background-color: var(--background-secondary);
-  color: var(--text-normal);
-  border-bottom-left-radius: 4px;
-  border: 1px solid var(--background-modifier-border);
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  color: white;
+  border-bottom-left-radius: 6px;
+  border: 1px solid var(--ai-glass-border);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
 }
 
 /* ============================================
@@ -296,7 +549,7 @@
    ============================================ */
 
 .ai-assistant-message-content {
-  line-height: 1.6;
+  line-height: 1.7;
   word-wrap: break-word;
   font-size: 14px;
 }
@@ -309,54 +562,66 @@
   margin-bottom: 0;
 }
 
+/* Inline Code - Glass */
 .ai-assistant-message-content code {
-  background-color: var(--background-primary-alt);
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: var(--ai-glass-bg-hover);
+  backdrop-filter: var(--ai-glass-blur);
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 0.9em;
   font-family: var(--font-monospace);
+  border: 1px solid var(--ai-glass-border);
 }
 
 .ai-assistant-message-user .ai-assistant-message-content code {
-  background-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Code Block - Glass */
 .ai-assistant-message-content pre {
   position: relative;
-  margin: 12px 0;
-  padding: 16px;
-  background-color: var(--background-primary-alt);
-  border-radius: 8px;
+  margin: 14px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border-radius: 14px;
   overflow-x: auto;
-  border: 1px solid var(--background-modifier-border);
+  border: 1px solid var(--ai-glass-border);
+  box-shadow: var(--ai-shadow-soft), inset 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .ai-assistant-message-user .ai-assistant-message-content pre {
-  background-color: rgba(0, 0, 0, 0.2);
-  border-color: transparent;
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .ai-assistant-message-content pre code {
   background: none;
   padding: 0;
+  border: none;
+  color: #e2e8f0;
 }
 
-/* ============================================
-   Copy Code Button
-   ============================================ */
-
+/* Copy Code Button - Glass */
 .ai-assistant-copy-code {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background-color: var(--background-modifier-hover);
-  border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
+  top: 12px;
+  right: 12px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 8px;
+  padding: 6px 12px;
   cursor: pointer;
   opacity: 0;
-  transition: all 0.2s ease;
-  font-size: 12px;
+  transition: all 0.3s ease;
+  font-size: 11px;
+  color: white;
+  font-weight: 500;
+  box-shadow: var(--ai-shadow-soft);
 }
 
 .ai-assistant-message-content pre:hover .ai-assistant-copy-code {
@@ -364,7 +629,10 @@
 }
 
 .ai-assistant-copy-code:hover {
-  background-color: var(--background-modifier-border);
+  background: var(--ai-gradient-primary);
+  border-color: transparent;
+  transform: scale(1.05);
+  box-shadow: var(--ai-glow-primary);
 }
 
 /* ============================================
@@ -375,8 +643,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 6px;
-  gap: 8px;
+  margin-top: 10px;
+  gap: 10px;
 }
 
 .ai-assistant-message-user .ai-assistant-message-meta-row {
@@ -385,120 +653,211 @@
 
 .ai-assistant-message-meta {
   font-size: 11px;
-  color: var(--text-muted);
-  padding-left: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  padding-left: 6px;
 }
 
 .ai-assistant-message-user .ai-assistant-message-meta {
   text-align: right;
-  padding-right: 4px;
+  padding-right: 6px;
   padding-left: 0;
+  color: rgba(255, 255, 255, 0.7);
 }
 
+/* User Action Buttons - Glass */
 .ai-assistant-user-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .ai-assistant-action-btn-small {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 8px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.6);
-  transition: all 0.15s ease;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+  box-shadow: var(--ai-shadow-soft);
 }
 
 .ai-assistant-action-btn-small:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--ai-glass-bg-hover);
+  border-color: var(--ai-glass-border-hover);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: var(--ai-glow-white);
 }
 
+/* Message Action Buttons - Glass */
 .ai-assistant-message-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  padding-left: 4px;
+  gap: 10px;
+  margin-top: 14px;
+  padding-left: 6px;
 }
 
 .ai-assistant-action-btn-modern {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 10px;
   cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.15s ease;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
 }
 
 .ai-assistant-action-btn-modern:hover:not(:disabled) {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
-  border-color: var(--interactive-accent);
+  background: var(--ai-glass-bg-hover);
+  border-color: var(--ai-glass-border-focus);
+  color: white;
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
+  transform: translateY(-3px);
 }
 
 .ai-assistant-action-btn-modern:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
+/* ============================================
+   APPLY EDIT BUTTON - Attention Animation
+   ============================================ */
+
 .ai-assistant-action-btn-modern.ai-assistant-action-apply {
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border-color: var(--interactive-accent);
+  background: var(--ai-gradient-success);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: var(--ai-glow-success), var(--ai-shadow-soft);
+  animation: apply-pulse 1.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
 }
 
+.ai-assistant-action-btn-modern.ai-assistant-action-apply::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: var(--ai-gradient-success);
+  border-radius: 13px;
+  z-index: -1;
+  animation: apply-glow 1.5s ease-in-out infinite;
+}
+
+.ai-assistant-action-btn-modern.ai-assistant-action-apply::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 70%
+  );
+  animation: apply-shimmer 2s infinite;
+}
+
+@keyframes apply-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(56, 239, 125, 0.5);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 35px rgba(56, 239, 125, 0.8);
+  }
+}
+
+@keyframes apply-glow {
+  0%, 100% {
+    opacity: 0.4;
+    filter: blur(10px);
+  }
+  50% {
+    opacity: 0.7;
+    filter: blur(15px);
+  }
+}
+
+@keyframes apply-shimmer {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.ai-assistant-action-btn-modern.ai-assistant-action-apply:hover {
+  animation: none;
+  transform: scale(1.15);
+  box-shadow: 0 0 40px rgba(56, 239, 125, 1);
+}
+
+.ai-assistant-action-btn-modern.ai-assistant-action-apply:hover::before {
+  animation: none;
+  opacity: 0.8;
+}
+
+.ai-assistant-action-btn-modern.ai-assistant-action-apply:hover::after {
+  animation: none;
+}
+
+/* Applied state */
 .ai-assistant-action-btn-modern.ai-assistant-action-applied {
-  background-color: var(--color-green);
-  border-color: var(--color-green);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: none;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.ai-assistant-action-btn-modern.ai-assistant-action-applied::before,
+.ai-assistant-action-btn-modern.ai-assistant-action-applied::after {
+  display: none;
 }
 
 /* ============================================
-   Typing Indicator - Modern
+   Typing Indicator - Glass
    ============================================ */
 
 .ai-assistant-typing-modern {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 0;
+  gap: 6px;
+  padding: 8px 0;
 }
 
 .ai-assistant-typing-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--text-muted);
+  width: 10px;
+  height: 10px;
+  background: var(--ai-gradient-primary);
   border-radius: 50%;
   animation: typing-bounce 1.4s ease-in-out infinite both;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
 }
 
-.ai-assistant-typing-dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.ai-assistant-typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.ai-assistant-typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
+.ai-assistant-typing-dot:nth-child(1) { animation-delay: 0s; }
+.ai-assistant-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-assistant-typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes typing-bounce {
   0%, 80%, 100% {
     transform: scale(0.6);
-    opacity: 0.5;
+    opacity: 0.4;
   }
   40% {
     transform: scale(1);
@@ -507,26 +866,43 @@
 }
 
 /* ============================================
-   Input Area - Modern Design
+   Input Area - Full Glassmorphism
    ============================================ */
 
 .ai-assistant-input-wrapper {
-  padding: 16px;
-  background-color: var(--background-secondary);
-  border-top: 1px solid var(--background-modifier-border);
+  padding: 20px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur-strong);
+  -webkit-backdrop-filter: var(--ai-glass-blur-strong);
+  border-top: 1px solid var(--ai-glass-border);
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.2);
+}
+
+.ai-assistant-input-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ai-gradient-primary);
+  opacity: 0.5;
 }
 
 .ai-assistant-context-section {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .ai-assistant-active-note-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
+/* Toggle - Glass */
 .ai-assistant-toggle-wrapper {
   position: relative;
   display: inline-flex;
@@ -543,56 +919,76 @@
 .ai-assistant-toggle-label-modern {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 20px;
-  background-color: var(--background-modifier-border);
-  border-radius: 20px;
+  width: 48px;
+  height: 26px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 26px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .ai-assistant-toggle-slider {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background-color: white;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
   border-radius: 50%;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .ai-assistant-context-toggle:checked + .ai-assistant-toggle-label-modern {
-  background-color: var(--interactive-accent);
+  background: var(--ai-gradient-primary);
+  border-color: transparent;
+  box-shadow: var(--ai-glow-primary), var(--ai-shadow-soft);
 }
 
 .ai-assistant-context-toggle:checked + .ai-assistant-toggle-label-modern .ai-assistant-toggle-slider {
-  transform: translateX(16px);
+  transform: translateX(22px);
 }
 
 .ai-assistant-active-note-display {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
 }
 
+/* Note Tag - Glass */
 .ai-assistant-note-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border-radius: 6px;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--ai-gradient-primary);
+  color: white;
+  border-radius: 10px;
   font-size: 12px;
-  max-width: 200px;
+  font-weight: 500;
+  max-width: 240px;
+  box-shadow: var(--ai-glow-primary), var(--ai-shadow-soft);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.ai-assistant-note-tag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  border-radius: 10px;
+  pointer-events: none;
 }
 
 .ai-assistant-note-icon {
   display: flex;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .ai-assistant-note-name {
@@ -602,63 +998,76 @@
 }
 
 .ai-assistant-note-disabled {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   font-style: italic;
 }
 
+/* Reference Row */
 .ai-assistant-references-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
+/* Add Reference Button - Glass */
 .ai-assistant-add-ref-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 10px 16px;
   font-size: 12px;
-  background-color: var(--background-primary);
-  border: 1px dashed var(--background-modifier-border);
-  border-radius: 6px;
+  font-weight: 500;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px dashed var(--ai-glass-border);
+  border-radius: 10px;
   cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.15s ease;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft);
 }
 
 .ai-assistant-add-ref-btn:hover {
-  border-color: var(--interactive-accent);
-  color: var(--interactive-accent);
-  background-color: var(--background-secondary-alt);
+  background: var(--ai-glass-bg-hover);
+  border-color: var(--ai-glass-border-focus);
+  border-style: solid;
+  color: white;
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
+  transform: translateY(-2px);
 }
 
 .ai-assistant-referenced-notes {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* Reference Tag - Glass */
 .ai-assistant-ref-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background-color: var(--background-primary-alt);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid rgba(79, 172, 254, 0.4);
+  border-radius: 10px;
   font-size: 12px;
-  color: var(--text-normal);
+  color: white;
+  box-shadow: var(--ai-shadow-soft), 0 0 10px rgba(79, 172, 254, 0.2);
 }
 
 .ai-assistant-ref-icon {
   display: flex;
-  color: var(--text-muted);
+  color: #4facfe;
 }
 
 .ai-assistant-ref-name {
-  max-width: 120px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -667,20 +1076,22 @@
 .ai-assistant-ref-remove {
   display: flex;
   cursor: pointer;
-  color: var(--text-muted);
-  margin-left: 2px;
-  border-radius: 4px;
-  padding: 2px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 4px;
+  border-radius: 6px;
+  padding: 4px;
+  transition: all 0.2s ease;
 }
 
 .ai-assistant-ref-remove:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-error);
+  background: rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
 
+/* Input Area */
 .ai-assistant-input-area-modern {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   align-items: flex-end;
 }
 
@@ -689,138 +1100,201 @@
   position: relative;
 }
 
+/* Textarea - Full Glass */
 .ai-assistant-input-modern {
   width: 100%;
   resize: none;
-  padding: 12px 16px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 12px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
+  padding: 16px 20px;
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 18px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  color: white;
   font-size: 14px;
-  line-height: 1.5;
-  min-height: 44px;
+  line-height: 1.6;
+  min-height: 54px;
   max-height: 200px;
   overflow-y: auto;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
+}
+
+.ai-assistant-input-modern:hover {
+  background: var(--ai-glass-bg-hover);
+  border-color: var(--ai-glass-border-hover);
 }
 
 .ai-assistant-input-modern:focus {
   outline: none;
-  border-color: var(--interactive-accent);
-  box-shadow: 0 0 0 3px rgba(var(--interactive-accent-rgb), 0.15);
+  border-color: var(--ai-glass-border-focus);
+  background: var(--ai-glass-bg-active);
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
 }
 
 .ai-assistant-input-modern::placeholder {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .ai-assistant-input-modern:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+/* Send Button - Glass with Gradient */
 .ai-assistant-send-btn-modern {
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  height: 54px;
   border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
-  color: var(--text-on-accent);
+  border-radius: 18px;
+  background: var(--ai-gradient-primary);
+  color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(var(--interactive-accent-rgb), 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), var(--ai-glow-primary);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ai-assistant-send-btn-modern::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.ai-assistant-send-btn-modern::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 70%
+  );
+  transition: transform 0.5s;
+  transform: translateX(-100%) rotate(45deg);
+}
+
+.ai-assistant-send-btn-modern:hover:not(:disabled)::after {
+  transform: translateX(100%) rotate(45deg);
 }
 
 .ai-assistant-send-btn-modern:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--interactive-accent-rgb), 0.4);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: var(--ai-shadow-medium), 0 0 35px rgba(102, 126, 234, 0.7);
 }
 
 .ai-assistant-send-btn-modern:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
 }
 
 .ai-assistant-send-btn-modern:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .ai-assistant-send-icon {
   display: flex;
+  position: relative;
+  z-index: 1;
 }
 
 .ai-assistant-hint {
-  margin-top: 8px;
+  margin-top: 12px;
   font-size: 11px;
-  color: var(--text-faint);
+  color: rgba(255, 255, 255, 0.35);
   text-align: center;
 }
 
-/* Loading state for send button */
+/* Loading state */
 .ai-assistant-send-btn-modern.ai-assistant-loading .ai-assistant-send-icon {
   display: none;
 }
 
 .ai-assistant-send-btn-modern.ai-assistant-loading::after {
   content: "";
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--text-on-accent);
-  border-top-color: transparent;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  position: relative;
+  z-index: 1;
+  transform: none;
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 /* ============================================
-   Error Message
+   Error Message - Glass
    ============================================ */
 
 .ai-assistant-error {
-  color: var(--text-error);
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
 /* ============================================
-   Settings Tab Styles
+   Settings Tab - Full Glassmorphism
    ============================================ */
 
 .ai-assistant-info {
-  padding: 16px;
-  background-color: var(--background-secondary);
-  border-radius: 8px;
-  margin-top: 16px;
+  padding: 24px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border-radius: 16px;
+  margin-top: 24px;
+  border: 1px solid var(--ai-glass-border);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
 }
 
 .ai-assistant-info p {
-  margin: 0 0 8px 0;
-  color: var(--text-muted);
+  margin: 0 0 12px 0;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .ai-assistant-info a {
-  color: var(--text-accent);
+  color: #667eea;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.ai-assistant-info a:hover {
+  color: #764ba2;
+  text-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
 }
 
 /* ============================================
-   Mermaid Preview
+   Mermaid Preview - Glass
    ============================================ */
 
 .ai-assistant-message-content .mermaid {
-  background-color: var(--background-primary-alt);
-  padding: 16px;
-  border-radius: 8px;
-  margin: 8px 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  padding: 24px;
+  border-radius: 16px;
+  margin: 14px 0;
   overflow-x: auto;
+  border: 1px solid var(--ai-glass-border);
+  box-shadow: var(--ai-shadow-soft);
 }
 
 /* ============================================
@@ -829,54 +1303,75 @@
 
 .ai-assistant-message-content ul,
 .ai-assistant-message-content ol {
-  margin: 8px 0;
-  padding-left: 24px;
+  margin: 12px 0;
+  padding-left: 28px;
 }
 
 .ai-assistant-message-content li {
-  margin: 4px 0;
+  margin: 8px 0;
+}
+
+.ai-assistant-message-content li::marker {
+  color: #667eea;
 }
 
 /* ============================================
-   Blockquotes
+   Blockquotes - Glass
    ============================================ */
 
 .ai-assistant-message-content blockquote {
-  margin: 12px 0;
-  padding: 12px 16px;
-  border-left: 4px solid var(--interactive-accent);
-  background-color: var(--background-primary-alt);
-  color: var(--text-muted);
-  border-radius: 0 8px 8px 0;
+  margin: 16px 0;
+  padding: 16px 20px;
+  border-left: 4px solid #667eea;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 0 14px 14px 0;
+  box-shadow: var(--ai-shadow-soft);
 }
 
 .ai-assistant-message-user .ai-assistant-message-content blockquote {
-  border-left-color: var(--text-on-accent);
-  background-color: rgba(0, 0, 0, 0.1);
+  border-left-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* ============================================
-   Tables
+   Tables - Glass
    ============================================ */
 
 .ai-assistant-message-content table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
-  border-radius: 8px;
+  margin: 16px 0;
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: var(--ai-shadow-soft);
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
 }
 
 .ai-assistant-message-content th,
 .ai-assistant-message-content td {
-  padding: 10px 12px;
-  border: 1px solid var(--background-modifier-border);
+  padding: 14px 18px;
+  border: 1px solid var(--ai-glass-border);
   text-align: left;
 }
 
 .ai-assistant-message-content th {
-  background-color: var(--background-secondary-alt);
+  background: var(--ai-gradient-primary);
+  color: white;
   font-weight: 600;
+  border-color: transparent;
+}
+
+.ai-assistant-message-content tr:nth-child(even) td {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.ai-assistant-message-content tr:hover td {
+  background: rgba(102, 126, 234, 0.15);
 }
 
 /* ============================================
@@ -884,127 +1379,190 @@
    ============================================ */
 
 .ai-assistant-message-content a {
-  color: var(--text-accent);
+  color: #667eea;
   text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .ai-assistant-message-content a:hover {
-  text-decoration: underline;
+  color: #764ba2;
+  text-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
 }
 
 .ai-assistant-message-user .ai-assistant-message-content a {
-  color: var(--text-on-accent);
-  text-decoration: underline;
+  color: #a5f3fc;
 }
 
 /* ============================================
-   Scrollbar
+   Scrollbar - Glass Style
    ============================================ */
 
 .ai-assistant-messages::-webkit-scrollbar {
-  width: 8px;
+  width: 12px;
 }
 
 .ai-assistant-messages::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
 }
 
 .ai-assistant-messages::-webkit-scrollbar-thumb {
-  background-color: var(--background-modifier-border);
-  border-radius: 4px;
+  background: var(--ai-glass-bg-hover);
+  backdrop-filter: var(--ai-glass-blur);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .ai-assistant-messages::-webkit-scrollbar-thumb:hover {
-  background-color: var(--background-modifier-border-hover);
+  background: var(--ai-gradient-primary);
+  background-clip: padding-box;
 }
 
 /* ============================================
-   Settings - Provider Status Badges
+   Settings - Provider Status Badges - Glass
    ============================================ */
 
 .ai-assistant-provider-status {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-top: 20px;
+  margin-bottom: 24px;
 }
 
 .ai-assistant-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  color: var(--text-muted);
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+  box-shadow: var(--ai-shadow-soft);
 }
 
 .ai-assistant-status-badge.active {
-  background-color: var(--interactive-accent);
-  border-color: var(--interactive-accent);
-  color: var(--text-on-accent);
+  background: var(--ai-gradient-primary);
+  border: none;
+  color: white;
+  box-shadow: var(--ai-glow-primary), var(--ai-shadow-soft);
 }
 
 .ai-assistant-status-badge.configured {
-  border-color: var(--color-green);
+  border-color: #10b981;
 }
 
 .ai-assistant-status-badge.configured .status-icon {
-  color: var(--color-green);
+  color: #10b981;
 }
 
 .ai-assistant-status-badge.active.configured .status-icon {
-  color: var(--text-on-accent);
+  color: white;
 }
 
 .ai-assistant-status-badge.not-configured .status-icon {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ============================================
-   Settings - Provider Sections
+   Settings - Provider Sections - Glass
    ============================================ */
 
 .ai-assistant-provider-section {
-  margin-bottom: 24px;
-  padding: 16px;
-  border-radius: 8px;
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
+  margin-bottom: 32px;
+  padding: 28px;
+  border-radius: 20px;
+  background: var(--ai-glass-bg);
+  backdrop-filter: var(--ai-glass-blur);
+  -webkit-backdrop-filter: var(--ai-glass-blur);
+  border: 1px solid var(--ai-glass-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ai-shadow-soft), var(--ai-shadow-inset);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-assistant-provider-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .ai-assistant-provider-section.active {
-  border-color: var(--interactive-accent);
-  background-color: var(--background-secondary-alt);
+  border-color: var(--ai-glass-border-focus);
+  background: var(--ai-glass-bg-active);
+  box-shadow: var(--ai-shadow-medium), var(--ai-glow-primary);
+}
+
+.ai-assistant-provider-section.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ai-gradient-primary);
 }
 
 .ai-assistant-provider-section.inactive {
-  opacity: 0.7;
+  opacity: 0.5;
+}
+
+.ai-assistant-provider-section.inactive:hover {
+  opacity: 0.75;
+  border-color: var(--ai-glass-border-hover);
 }
 
 .ai-assistant-provider-section h2 {
   margin-top: 0;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 .ai-assistant-provider-section.active h2 {
-  color: var(--interactive-accent);
+  background: var(--ai-gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .ai-assistant-link {
-  margin-top: 12px;
+  margin-top: 20px;
   font-size: 13px;
+  position: relative;
+  z-index: 1;
 }
 
 .ai-assistant-link a {
-  color: var(--text-accent);
+  color: #667eea;
   text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  padding: 8px 16px;
+  background: var(--ai-glass-bg);
+  border: 1px solid var(--ai-glass-border);
+  border-radius: 8px;
+  display: inline-block;
 }
 
 .ai-assistant-link a:hover {
-  text-decoration: underline;
+  color: white;
+  background: var(--ai-gradient-primary);
+  border-color: transparent;
+  box-shadow: var(--ai-glow-primary);
 }
 
 /* ============================================
@@ -1014,7 +1572,8 @@
 @media (max-width: 768px) {
   .ai-assistant-header {
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
+    padding: 14px 16px;
   }
 
   .ai-assistant-selectors {
@@ -1022,20 +1581,109 @@
   }
 
   .ai-assistant-message-wrapper {
-    max-width: 90%;
+    max-width: 92%;
   }
 
   .ai-assistant-suggestions-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .ai-assistant-suggestion-card {
     flex-direction: row;
     text-align: left;
-    gap: 12px;
+    gap: 16px;
+    padding: 16px;
   }
 
   .ai-assistant-suggestion-icon {
     margin-bottom: 0;
   }
+
+  .ai-assistant-input-wrapper {
+    padding: 16px;
+  }
+
+  .ai-assistant-send-btn-modern {
+    width: 50px;
+    height: 50px;
+  }
+
+  .ai-assistant-provider-section {
+    padding: 20px;
+    border-radius: 16px;
+  }
+}
+
+/* ============================================
+   Light Theme Adjustments
+   ============================================ */
+
+.theme-light .ai-assistant-container {
+  --ai-glass-bg: rgba(255, 255, 255, 0.7);
+  --ai-glass-bg-hover: rgba(255, 255, 255, 0.8);
+  --ai-glass-bg-active: rgba(255, 255, 255, 0.9);
+  --ai-glass-border: rgba(102, 126, 234, 0.2);
+  --ai-glass-border-hover: rgba(102, 126, 234, 0.3);
+  --ai-gradient-dark: linear-gradient(135deg, #f0f4ff 0%, #e6eeff 100%);
+}
+
+.theme-light .ai-assistant-container::before {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+}
+
+.theme-light .ai-assistant-provider-select,
+.theme-light .ai-assistant-model-select {
+  color: var(--text-normal);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.theme-light .ai-assistant-selector-label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.theme-light .ai-assistant-header-btn {
+  color: var(--text-muted);
+}
+
+.theme-light .ai-assistant-input-modern {
+  color: var(--text-normal);
+}
+
+.theme-light .ai-assistant-input-modern::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.theme-light .ai-assistant-message-assistant .ai-assistant-bubble {
+  color: var(--text-normal);
+}
+
+.theme-light .ai-assistant-welcome-subtitle,
+.theme-light .ai-assistant-suggestion-desc,
+.theme-light .ai-assistant-note-disabled,
+.theme-light .ai-assistant-hint {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.theme-light .ai-assistant-suggestion-text {
+  color: var(--text-normal);
+}
+
+.theme-light .ai-assistant-message-meta {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.theme-light .ai-assistant-action-btn-modern,
+.theme-light .ai-assistant-action-btn-small {
+  color: var(--text-muted);
+}
+
+.theme-light .ai-assistant-provider-section h2 {
+  color: var(--text-normal);
+}
+
+.theme-light .ai-assistant-info p {
+  color: var(--text-muted);
 }
