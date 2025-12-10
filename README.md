@@ -22,6 +22,16 @@ The AI can directly edit your notes using natural language commands:
 - Append/prepend content
 - Insert after headings
 
+### Transform Prompts
+One-click document transformation into professional formats:
+- **Pyramid** - Barbara Minto's Pyramid Principle structure
+- **COIN** - Context, Observation, Impact, Next Steps
+- **Business** - Executive summary format
+- **Management** - Crispy management briefing style
+- **Developer** - Technical documentation format
+- **Cosmos** - Creative cosmic perspective
+- **Cringe** - Fun, over-the-top style
+
 ### Rich Features
 - **Real-time streaming** - Watch responses appear as they're generated
 - **Context awareness** - Automatically includes active note content for relevant responses
@@ -29,6 +39,7 @@ The AI can directly edit your notes using natural language commands:
 - **Mermaid diagrams** - AI-generated diagrams are automatically sanitized for Obsidian compatibility
 - **Conversation memory** - Last 10 messages maintained for context continuity
 - **Copy to clipboard** - One-click copy for any message
+- **Retry responses** - Regenerate any AI response with one click
 - **Smart error handling** - User-friendly error messages with troubleshooting hints
 
 ### Beautiful UI
@@ -139,6 +150,16 @@ Use the toggle switch to enable/disable automatic context inclusion:
 - **ON** - AI sees your active note's content
 - **OFF** - AI responds without note context
 
+### Transform Prompts
+Transform your entire document into professional formats:
+1. Click the **Transform** card on the welcome screen
+2. Select a format (Pyramid, Business, Management, etc.)
+3. Click **Done** - the transform tag appears in the input area
+4. Optionally add custom instructions
+5. Press Send - the AI will restructure your document
+
+Transform prompts use specialized system prompts optimized for each format, ensuring high-quality output.
+
 ### Mermaid Diagrams
 Ask the AI to create diagrams:
 - "Create a flowchart showing the user registration process"
@@ -152,11 +173,12 @@ The AI will generate Mermaid code that's automatically sanitized for Obsidian co
 |---------|-------------|---------|
 | Provider | AI service to use | AWS Bedrock |
 | Model | Specific model for the provider | Varies |
-| Max Tokens | Maximum response length | 4096 |
+| Max Tokens | Maximum response length | 8192 |
 | Temperature | Response creativity (0-1) | 0.7 |
 | System Prompt | Custom instructions for the AI | Empty |
 | Auto Include Context | Include active note in requests | Enabled |
 | Stream Responses | Show responses as they generate | Enabled |
+| Excluded Notes | Notes to never include in context | Empty |
 
 ## Keyboard Shortcuts
 
@@ -207,6 +229,7 @@ src/
 ├── groqService.ts       # Groq integration
 ├── modelFetcher.ts      # Dynamic model fetching
 ├── contextBuilder.ts    # Prompt construction
+├── transformPrompts.ts  # Transform prompt templates
 ├── noteController.ts    # Note read/write operations
 ├── editProtocol.ts      # Edit command parsing
 └── mermaidHandler.ts    # Diagram processing
