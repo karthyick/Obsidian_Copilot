@@ -90,7 +90,7 @@ export class BedrockService implements ILLMService {
       };
 
       const command = new InvokeModelCommand({
-        modelId: this.settings.bedrockModelId,
+        modelId: this.getEffectiveModelId(),
         contentType: "application/json",
         accept: "application/json",
         body: JSON.stringify(requestBody),
@@ -143,7 +143,7 @@ export class BedrockService implements ILLMService {
     };
 
     const command = new InvokeModelCommand({
-      modelId: this.settings.bedrockModelId,
+      modelId: this.getEffectiveModelId(),
       contentType: "application/json",
       accept: "application/json",
       body: JSON.stringify(requestBody),
@@ -189,7 +189,7 @@ export class BedrockService implements ILLMService {
     };
 
     const command = new InvokeModelWithResponseStreamCommand({
-      modelId: this.settings.bedrockModelId,
+      modelId: this.getEffectiveModelId(),
       contentType: "application/json",
       accept: "application/json",
       body: JSON.stringify(requestBody),
@@ -290,10 +290,20 @@ export class BedrockService implements ILLMService {
   }
 
   /**
+   * Get the effective model ID (custom if "other" selected)
+   */
+  private getEffectiveModelId(): string {
+    if (this.settings.bedrockModelId === "other") {
+      return this.settings.bedrockCustomModelId || "anthropic.claude-sonnet-4-20250514-v1:0";
+    }
+    return this.settings.bedrockModelId;
+  }
+
+  /**
    * Get the current model ID
    */
   public getModelId(): string {
-    return this.settings.bedrockModelId;
+    return this.getEffectiveModelId();
   }
 
   /**

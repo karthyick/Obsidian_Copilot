@@ -7,6 +7,7 @@ import { EditProtocol } from "./editProtocol";
  */
 export class ContextBuilder {
   private noteController: NoteController;
+  private getExcludedNotes: () => string[];
 
   // Maximum tokens to allow for note content (rough estimate: 4 chars = 1 token)
   private static readonly MAX_NOTE_TOKENS = 8000;
@@ -14,8 +15,16 @@ export class ContextBuilder {
   private static readonly MAX_NOTE_CHARS =
     ContextBuilder.MAX_NOTE_TOKENS * ContextBuilder.CHARS_PER_TOKEN;
 
-  constructor(noteController: NoteController) {
+  constructor(noteController: NoteController, getExcludedNotes?: () => string[]) {
     this.noteController = noteController;
+    this.getExcludedNotes = getExcludedNotes || (() => []);
+  }
+
+  /**
+   * Check if a note path is in the excluded list
+   */
+  private isNoteExcluded(path: string): boolean {
+    return this.getExcludedNotes().includes(path);
   }
 
   /**
@@ -151,6 +160,50 @@ When a user sends a message, you receive:
 - Write summaries, conclusions, introductions
 - Create lists, outlines, and structured content
 - Produce code blocks in any language
+
+## 1.4 RESPONSE FORMATTING - OBSIDIAN STYLE
+
+**CRITICAL: All responses must be formatted for Obsidian readability.**
+
+Your responses should use proper markdown structure that looks great in Obsidian:
+
+**Always Use:**
+- **Headings** (## for main sections, ### for subsections) to organize content
+- **Bold** for key terms and important concepts
+- **Bullet points** for lists of items or features
+- **Numbered lists** for sequential steps or prioritized items
+- **Blockquotes** (>) for highlighting important notes or callouts
+- **Code blocks** (\`\`\`) for code, commands, or structured data
+- **Tables** for comparing items or organizing data with multiple attributes
+- **Horizontal rules** (---) to separate major sections
+
+**Response Structure Template:**
+\`\`\`markdown
+## Main Topic/Summary Title
+
+Brief introduction or key takeaway in 1-2 sentences.
+
+### Section 1
+- Key point one
+- Key point two
+- Key point three
+
+### Section 2
+> Important insight or callout
+
+Detailed explanation with **bold emphasis** on key terms.
+
+### Conclusion/Next Steps
+1. First action item
+2. Second action item
+\`\`\`
+
+**Formatting Rules:**
+- Never output plain unstructured text blocks
+- Use headings to create scannable content
+- Keep paragraphs short (2-4 sentences max)
+- Use visual hierarchy to highlight what matters most
+- Match the formatting style to the request (summary = structured, explanation = detailed)
 
 ================================================================================
 SECTION 2: THE ACTION-FIRST MANDATE (REINFORCEMENT)
@@ -1520,6 +1573,11 @@ Current Note Context:
     const noteContext = await this.noteController.getNoteContext();
     if (!noteContext) {
       return userMessage;
+    }
+
+    // Check if the active note is excluded
+    if (this.isNoteExcluded(noteContext.path)) {
+      return userMessage; // Don't include excluded note context
     }
 
     const contextParts: string[] = [];

@@ -18,14 +18,17 @@ export interface AIAssistantSettings {
   awsSessionToken: string;
   awsRegion: string;
   bedrockModelId: string;
+  bedrockCustomModelId: string;
 
   // Google Gemini settings
   geminiApiKey: string;
   geminiModelId: string;
+  geminiCustomModelId: string;
 
   // Groq settings
   groqApiKey: string;
   groqModelId: string;
+  groqCustomModelId: string;
 
   // Common settings
   maxTokens: number;
@@ -33,6 +36,9 @@ export interface AIAssistantSettings {
   systemPrompt: string;
   autoIncludeContext: boolean;
   streamResponses: boolean;
+
+  // Excluded notes (paths that should never be included in context)
+  excludedNotes: string[];
 }
 
 /**
@@ -47,21 +53,27 @@ export const DEFAULT_SETTINGS: AIAssistantSettings = {
   awsSessionToken: "",
   awsRegion: "us-east-1",
   bedrockModelId: "anthropic.claude-sonnet-4-20250514-v1:0",
+  bedrockCustomModelId: "",
 
   // Gemini
   geminiApiKey: "",
   geminiModelId: "gemini-2.0-flash",
+  geminiCustomModelId: "",
 
   // Groq
   groqApiKey: "",
   groqModelId: "llama-3.3-70b-versatile",
+  groqCustomModelId: "",
 
   // Common
-  maxTokens: 4096,
+  maxTokens: 8192,
   temperature: 0.7,
   systemPrompt: "",
   autoIncludeContext: true,
   streamResponses: true,
+
+  // Excluded notes
+  excludedNotes: [],
 };
 
 /**

@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, DropdownComponent } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, DropdownComponent, setIcon, FuzzySuggestModal, TFile } from "obsidian";
 import type AIAssistantPlugin from "./main";
 import {
   AIAssistantSettings,
@@ -10,12 +10,44 @@ import {
 import { ModelFetcher, ModelInfo } from "./modelFetcher";
 
 /**
+ * Modal for selecting notes to exclude
+ */
+class ExcludedNoteSuggesterModal extends FuzzySuggestModal<TFile> {
+  private onSelect: (file: TFile) => void;
+  private excludedPaths: string[];
+
+  constructor(app: App, excludedPaths: string[], onSelect: (file: TFile) => void) {
+    super(app);
+    this.onSelect = onSelect;
+    this.excludedPaths = excludedPaths;
+    this.setPlaceholder("Search for a note to exclude...");
+  }
+
+  getItems(): TFile[] {
+    // Return all markdown files except already excluded ones
+    return this.app.vault.getMarkdownFiles().filter(
+      (file) => !this.excludedPaths.includes(file.path)
+    );
+  }
+
+  getItemText(item: TFile): string {
+    return item.path;
+  }
+
+  onChooseItem(item: TFile): void {
+    this.onSelect(item);
+  }
+}
+
+/**
  * Settings tab for the AI Assistant plugin
  */
 export class AIAssistantSettingTab extends PluginSettingTab {
   plugin: AIAssistantPlugin;
+  private bedrockModels: ModelInfo[] = [];
   private geminiModels: ModelInfo[] = [];
   private groqModels: ModelInfo[] = [];
+  private bedrockDropdown: DropdownComponent | null = null;
   private geminiDropdown: DropdownComponent | null = null;
   private groqDropdown: DropdownComponent | null = null;
 
@@ -27,6 +59,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+
+    // Add glassmorphism class to settings container
+    containerEl.addClass("ai-assistant-settings");
 
     containerEl.createEl("h1", { text: "AI Assistant Settings" });
 
@@ -174,32 +209,58 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     new Setting(section)
       .setName("AWS Region")
-      .setDesc("AWS region where Bedrock is enabled")
-      .addDropdown((dropdown) => {
-        for (const [value, label] of Object.entries(AWS_REGIONS)) {
-          dropdown.addOption(value, label);
-        }
-        dropdown.setValue(this.plugin.settings.awsRegion);
-        dropdown.onChange(async (value) => {
-          this.plugin.settings.awsRegion = value;
-          await this.plugin.saveSettings();
-          this.plugin.reinitializeLLMService();
-        });
-      });
+      .setDesc("AWS region where Bedrock is enabled (e.g., us-east-1, us-west-2, ap-south-1)")
+      .addText((text) =>
+        text
+          .setPlaceholder("e.g., us-east-1")
+          .setValue(this.plugin.settings.awsRegion)
+          .onChange(async (value) => {
+            this.plugin.settings.awsRegion = value.trim();
+            await this.plugin.saveSettings();
+            this.plugin.reinitializeLLMService();
+          })
+      );
 
     new Setting(section)
       .setName("Model")
       .setDesc("Select the Claude model to use")
       .addDropdown((dropdown) => {
-        for (const [value, label] of Object.entries(BEDROCK_MODELS)) {
-          dropdown.addOption(value, label);
-        }
+        this.bedrockDropdown = dropdown;
+        this.populateBedrockDropdown(dropdown);
         dropdown.setValue(this.plugin.settings.bedrockModelId);
         dropdown.onChange(async (value) => {
           this.plugin.settings.bedrockModelId = value;
           await this.plugin.saveSettings();
+          this.display(); // Refresh to show/hide custom model textbox
         });
-      });
+      })
+      .addButton((button) =>
+        button
+          .setIcon("refresh-cw")
+          .setTooltip("Refresh models list")
+          .onClick(async () => {
+            button.setDisabled(true);
+            await this.refreshBedrockModels();
+            button.setDisabled(false);
+            new Notice("Bedrock models refreshed");
+          })
+      );
+
+    // Custom model ID textbox (shown when "Other" is selected)
+    if (this.plugin.settings.bedrockModelId === "other") {
+      new Setting(section)
+        .setName("Custom Model ID")
+        .setDesc("Enter the full Bedrock model ID (e.g., anthropic.claude-3-opus-20240229-v1:0)")
+        .addText((text) =>
+          text
+            .setPlaceholder("Enter custom model ID")
+            .setValue(this.plugin.settings.bedrockCustomModelId)
+            .onChange(async (value) => {
+              this.plugin.settings.bedrockCustomModelId = value.trim();
+              await this.plugin.saveSettings();
+            })
+        );
+    }
 
     // Test Connection Button
     new Setting(section)
@@ -251,7 +312,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         return text;
       });
 
-    const modelSetting = new Setting(section)
+    new Setting(section)
       .setName("Model")
       .setDesc("Select the Gemini model to use (fetched from API)")
       .addDropdown((dropdown) => {
@@ -261,6 +322,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         dropdown.onChange(async (value) => {
           this.plugin.settings.geminiModelId = value;
           await this.plugin.saveSettings();
+          this.display(); // Refresh to show/hide custom model textbox
         });
       })
       .addButton((button) =>
@@ -274,6 +336,22 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             new Notice("Gemini models refreshed");
           })
       );
+
+    // Custom model ID textbox (shown when "Other" is selected)
+    if (this.plugin.settings.geminiModelId === "other") {
+      new Setting(section)
+        .setName("Custom Model ID")
+        .setDesc("Enter the Gemini model ID (e.g., gemini-1.5-pro-latest)")
+        .addText((text) =>
+          text
+            .setPlaceholder("Enter custom model ID")
+            .setValue(this.plugin.settings.geminiCustomModelId)
+            .onChange(async (value) => {
+              this.plugin.settings.geminiCustomModelId = value.trim();
+              await this.plugin.saveSettings();
+            })
+        );
+    }
 
     // Test Connection Button
     new Setting(section)
@@ -299,6 +377,43 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Auto-fetch models if API key is set
     if (this.plugin.settings.geminiApiKey && this.geminiModels.length === 0) {
       this.refreshGeminiModels();
+    }
+  }
+
+  /**
+   * Refresh Bedrock models
+   */
+  private async refreshBedrockModels(): Promise<void> {
+    this.bedrockModels = ModelFetcher.getFallbackBedrockModels();
+
+    if (this.bedrockDropdown) {
+      const currentValue = this.bedrockDropdown.getValue();
+      this.populateBedrockDropdown(this.bedrockDropdown);
+      // Restore selection if still valid
+      const validModel = this.bedrockModels.find(m => m.id === currentValue);
+      if (validModel) {
+        this.bedrockDropdown.setValue(currentValue);
+      } else if (this.bedrockModels.length > 0) {
+        this.bedrockDropdown.setValue(this.bedrockModels[0].id);
+        this.plugin.settings.bedrockModelId = this.bedrockModels[0].id;
+        await this.plugin.saveSettings();
+      }
+    }
+  }
+
+  /**
+   * Populate Bedrock dropdown with models
+   */
+  private populateBedrockDropdown(dropdown: DropdownComponent): void {
+    // Clear existing options
+    dropdown.selectEl.empty();
+
+    const models = this.bedrockModels.length > 0
+      ? this.bedrockModels
+      : ModelFetcher.getFallbackBedrockModels();
+
+    for (const model of models) {
+      dropdown.addOption(model.id, model.name);
     }
   }
 
@@ -380,7 +495,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         return text;
       });
 
-    const modelSetting = new Setting(section)
+    new Setting(section)
       .setName("Model")
       .setDesc("Select the Groq model to use (fetched from API)")
       .addDropdown((dropdown) => {
@@ -390,6 +505,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         dropdown.onChange(async (value) => {
           this.plugin.settings.groqModelId = value;
           await this.plugin.saveSettings();
+          this.display(); // Refresh to show/hide custom model textbox
         });
       })
       .addButton((button) =>
@@ -403,6 +519,22 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             new Notice("Groq models refreshed");
           })
       );
+
+    // Custom model ID textbox (shown when "Other" is selected)
+    if (this.plugin.settings.groqModelId === "other") {
+      new Setting(section)
+        .setName("Custom Model ID")
+        .setDesc("Enter the Groq model ID (e.g., llama-3.2-90b-text-preview)")
+        .addText((text) =>
+          text
+            .setPlaceholder("Enter custom model ID")
+            .setValue(this.plugin.settings.groqCustomModelId)
+            .onChange(async (value) => {
+              this.plugin.settings.groqCustomModelId = value.trim();
+              await this.plugin.saveSettings();
+            })
+        );
+    }
 
     // Test Connection Button
     new Setting(section)
@@ -559,6 +691,84 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    // Excluded Notes Section
+    this.renderExcludedNotesSection(containerEl);
+  }
+
+  /**
+   * Render excluded notes section
+   */
+  private renderExcludedNotesSection(containerEl: HTMLElement): void {
+    containerEl.createEl("h2", { text: "Excluded Notes" });
+    containerEl.createEl("p", {
+      text: "Notes listed here will never be included in AI context, even when referenced. Use this to protect sensitive information.",
+      cls: "setting-item-description",
+    });
+
+    // Add note button with search
+    new Setting(containerEl)
+      .setName("Add Excluded Note")
+      .setDesc("Search and add a note to the exclusion list")
+      .addButton((button) =>
+        button
+          .setButtonText("Add Note")
+          .setIcon("file-plus")
+          .onClick(() => {
+            // Open note suggester
+            const modal = new ExcludedNoteSuggesterModal(
+              this.app,
+              this.plugin.settings.excludedNotes,
+              async (file) => {
+                if (!this.plugin.settings.excludedNotes.includes(file.path)) {
+                  this.plugin.settings.excludedNotes.push(file.path);
+                  await this.plugin.saveSettings();
+                  this.display(); // Refresh to show new note
+                  new Notice(`Added "${file.basename}" to excluded notes`);
+                } else {
+                  new Notice(`"${file.basename}" is already excluded`);
+                }
+              }
+            );
+            modal.open();
+          })
+      );
+
+    // List of currently excluded notes
+    if (this.plugin.settings.excludedNotes.length > 0) {
+      const listContainer = containerEl.createDiv({ cls: "ai-assistant-excluded-notes-list" });
+
+      for (const notePath of this.plugin.settings.excludedNotes) {
+        const noteItem = listContainer.createDiv({ cls: "ai-assistant-excluded-note-item" });
+
+        // Note icon and path
+        const noteInfo = noteItem.createDiv({ cls: "ai-assistant-excluded-note-info" });
+        const icon = noteInfo.createSpan({ cls: "ai-assistant-excluded-note-icon" });
+        setIcon(icon, "file-x");
+        noteInfo.createSpan({ text: notePath, cls: "ai-assistant-excluded-note-path" });
+
+        // Remove button
+        const removeBtn = noteItem.createEl("button", {
+          cls: "ai-assistant-excluded-note-remove",
+          attr: { "aria-label": "Remove from exclusion list" },
+        });
+        setIcon(removeBtn, "trash-2");
+        removeBtn.addEventListener("click", async () => {
+          this.plugin.settings.excludedNotes = this.plugin.settings.excludedNotes.filter(
+            (p) => p !== notePath
+          );
+          await this.plugin.saveSettings();
+          this.display();
+          const basename = notePath.split("/").pop()?.replace(".md", "") || notePath;
+          new Notice(`Removed "${basename}" from excluded notes`);
+        });
+      }
+    } else {
+      containerEl.createEl("p", {
+        text: "No notes are currently excluded.",
+        cls: "ai-assistant-no-excluded-notes",
+      });
+    }
   }
 
   /**

@@ -85,7 +85,7 @@ export class GroqService implements ILLMService {
 
     const groqMessages = this.convertToGroqFormat(messages, systemPrompt);
     const requestBody: GroqRequestBody = {
-      model: this.settings.groqModelId,
+      model: this.getEffectiveModelId(),
       messages: groqMessages,
       max_tokens: this.settings.maxTokens,
       temperature: this.settings.temperature,
@@ -128,7 +128,7 @@ export class GroqService implements ILLMService {
 
     const groqMessages = this.convertToGroqFormat(messages, systemPrompt);
     const requestBody: GroqRequestBody = {
-      model: this.settings.groqModelId,
+      model: this.getEffectiveModelId(),
       messages: groqMessages,
       max_tokens: this.settings.maxTokens,
       temperature: this.settings.temperature,
@@ -248,5 +248,15 @@ export class GroqService implements ILLMService {
     }
 
     return String(error);
+  }
+
+  /**
+   * Get the effective model ID (custom if "other" selected)
+   */
+  private getEffectiveModelId(): string {
+    if (this.settings.groqModelId === "other") {
+      return this.settings.groqCustomModelId || "llama-3.3-70b-versatile";
+    }
+    return this.settings.groqModelId;
   }
 }

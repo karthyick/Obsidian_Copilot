@@ -97,7 +97,7 @@ export class GeminiService implements ILLMService {
       };
     }
 
-    const url = `${this.baseUrl}/models/${this.settings.geminiModelId}:generateContent?key=${this.settings.geminiApiKey}`;
+    const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:generateContent?key=${this.settings.geminiApiKey}`;
 
     try {
       const response = await requestUrl({
@@ -150,7 +150,7 @@ export class GeminiService implements ILLMService {
       };
     }
 
-    const url = `${this.baseUrl}/models/${this.settings.geminiModelId}:streamGenerateContent?key=${this.settings.geminiApiKey}&alt=sse`;
+    const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:streamGenerateContent?key=${this.settings.geminiApiKey}&alt=sse`;
 
     try {
       // Obsidian's requestUrl doesn't support streaming directly,
@@ -250,5 +250,15 @@ export class GeminiService implements ILLMService {
     }
 
     return String(error);
+  }
+
+  /**
+   * Get the effective model ID (custom if "other" selected)
+   */
+  private getEffectiveModelId(): string {
+    if (this.settings.geminiModelId === "other") {
+      return this.settings.geminiCustomModelId || "gemini-2.0-flash";
+    }
+    return this.settings.geminiModelId;
   }
 }

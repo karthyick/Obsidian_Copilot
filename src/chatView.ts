@@ -20,6 +20,7 @@ import {
 import { EditProtocol } from "./editProtocol";
 import { MermaidHandler } from "./mermaidHandler";
 import { ModelFetcher } from "./modelFetcher";
+import { TransformType, getTransformPrompt, TRANSFORM_NAMES, TRANSFORM_DESCRIPTIONS, TRANSFORM_ICONS } from "./transformPrompts";
 
 /**
  * Note suggester modal for @mentions
@@ -65,6 +66,9 @@ export class AIChatView extends ItemView {
   private referencedNotesContainer: HTMLElement;
   private contextToggle: HTMLInputElement;
   private activeNoteDisplay: HTMLElement;
+  // Transform selections
+  private selectedTransforms: Set<TransformType> = new Set();
+  private transformTagsContainer: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: AIAssistantPlugin) {
     super(leaf);
@@ -200,6 +204,16 @@ export class AIChatView extends ItemView {
     settingsBtn.addEventListener("click", () => {
       (this.app as any).setting.open();
       (this.app as any).setting.openTabById(this.plugin.manifest.id);
+    });
+
+    // Close button
+    const closeBtn = headerRight.createEl("button", {
+      cls: "ai-assistant-header-btn ai-assistant-close-btn",
+      attr: { "aria-label": "Close" },
+    });
+    setIcon(closeBtn, "x");
+    closeBtn.addEventListener("click", () => {
+      this.leaf.detach();
     });
   }
 
@@ -412,9 +426,22 @@ export class AIChatView extends ItemView {
   }
 
   /**
+   * Check if a note is excluded
+   */
+  private isNoteExcluded(file: TFile): boolean {
+    return this.plugin.settings.excludedNotes.includes(file.path);
+  }
+
+  /**
    * Add a referenced note
    */
   private addReferencedNote(file: TFile): void {
+    // Check if note is excluded
+    if (this.isNoteExcluded(file)) {
+      new Notice(`⚠️ "${file.basename}" is in the excluded notes list and cannot be referenced.`);
+      return;
+    }
+
     // Don't add duplicates
     if (this.referencedNotes.some(n => n.path === file.path)) {
       return;
@@ -487,10 +514,233 @@ export class AIChatView extends ItemView {
       card.createDiv({ text: suggestion.desc, cls: "ai-assistant-suggestion-desc" });
 
       card.addEventListener("click", () => {
-        this.inputTextarea.value = suggestion.text;
-        this.inputTextarea.focus();
+        // Auto-send when clicking suggestion cards for better UX
+        this.sendMessage(suggestion.text);
       });
     }
+
+    // Transform card with expandable sub-options
+    this.createTransformCard(suggestionsGrid);
+  }
+
+  /**
+   * Create the Transform card with expandable full-screen view
+   */
+  private createTransformCard(container: HTMLElement): void {
+    const transformCard = container.createDiv({ cls: "ai-assistant-suggestion-card ai-assistant-transform-card" });
+    const iconEl = transformCard.createDiv({ cls: "ai-assistant-suggestion-icon ai-assistant-transform-icon" });
+    setIcon(iconEl, "shuffle");
+    transformCard.createDiv({ text: "Transform", cls: "ai-assistant-suggestion-text" });
+    transformCard.createDiv({ text: "Select format(s)", cls: "ai-assistant-suggestion-desc" });
+
+    // Store reference to the suggestions grid for hiding/showing
+    const suggestionsGrid = container;
+
+    // Click handler to expand transform view
+    transformCard.addEventListener("click", () => {
+      this.showTransformExpandedView(suggestionsGrid);
+    });
+  }
+
+  /**
+   * Show the expanded transform view with all options centered
+   */
+  private showTransformExpandedView(suggestionsGrid: HTMLElement): void {
+    // Get the welcome container (parent of suggestions grid)
+    const welcomeDiv = suggestionsGrid.closest(".ai-assistant-welcome-modern") as HTMLElement;
+    if (!welcomeDiv) return;
+
+    // Hide all other content in welcome div
+    welcomeDiv.addClass("ai-assistant-transform-mode");
+
+    // Create transform expanded view
+    const expandedView = welcomeDiv.createDiv({ cls: "ai-assistant-transform-expanded" });
+
+    // Header with back button
+    const header = expandedView.createDiv({ cls: "ai-assistant-transform-header" });
+
+    const backBtn = header.createEl("button", { cls: "ai-assistant-transform-back-btn" });
+    const backIcon = backBtn.createSpan();
+    setIcon(backIcon, "arrow-left");
+    backBtn.createSpan({ text: "Back" });
+    backBtn.addEventListener("click", () => {
+      this.hideTransformExpandedView(welcomeDiv, expandedView);
+    });
+
+    const headerTitle = header.createDiv({ cls: "ai-assistant-transform-header-title" });
+    const titleIcon = headerTitle.createSpan();
+    setIcon(titleIcon, "shuffle");
+    headerTitle.createSpan({ text: "Transform Document" });
+
+    // Description
+    expandedView.createEl("p", {
+      text: "Select one format to restructure your document",
+      cls: "ai-assistant-transform-subtitle"
+    });
+
+    // Transform options grid
+    const optionsGrid = expandedView.createDiv({ cls: "ai-assistant-transform-options-grid" });
+
+    // All transform types from backend
+    const transformTypes: TransformType[] = ["pyramid", "coin", "developer", "business", "management", "cosmos", "cringe"];
+
+    for (const type of transformTypes) {
+      const option = optionsGrid.createDiv({ cls: "ai-assistant-transform-option-card" });
+      option.dataset.transform = type;
+
+      // Check if already selected
+      if (this.selectedTransforms.has(type)) {
+        option.addClass("selected");
+      }
+
+      const optionIcon = option.createDiv({ cls: "ai-assistant-transform-option-icon" });
+      setIcon(optionIcon, TRANSFORM_ICONS[type]);
+
+      const textContent = option.createDiv({ cls: "ai-assistant-transform-option-content" });
+      textContent.createDiv({ text: TRANSFORM_NAMES[type], cls: "ai-assistant-transform-option-title" });
+      textContent.createDiv({ text: TRANSFORM_DESCRIPTIONS[type], cls: "ai-assistant-transform-option-desc" });
+
+      // Selection indicator
+      const checkIcon = option.createDiv({ cls: "ai-assistant-transform-check" });
+      setIcon(checkIcon, "check");
+
+      option.addEventListener("click", () => {
+        const isSelected = option.classList.toggle("selected");
+        this.toggleTransformSelection(type, isSelected);
+      });
+    }
+
+    // Action buttons at bottom
+    const actions = expandedView.createDiv({ cls: "ai-assistant-transform-actions" });
+
+    const clearBtn = actions.createEl("button", {
+      cls: "ai-assistant-transform-clear-btn",
+      text: "Clear All"
+    });
+    clearBtn.addEventListener("click", () => {
+      this.selectedTransforms.clear();
+      optionsGrid.querySelectorAll(".ai-assistant-transform-option-card").forEach(card => {
+        card.removeClass("selected");
+      });
+      this.updateTransformIndicator();
+    });
+
+    const doneBtn = actions.createEl("button", {
+      cls: "ai-assistant-transform-done-btn",
+      text: "Done"
+    });
+    doneBtn.addEventListener("click", () => {
+      this.hideTransformExpandedView(welcomeDiv, expandedView);
+    });
+  }
+
+  /**
+   * Hide the expanded transform view and restore normal view
+   */
+  private hideTransformExpandedView(welcomeDiv: HTMLElement, expandedView: HTMLElement): void {
+    expandedView.remove();
+    welcomeDiv.removeClass("ai-assistant-transform-mode");
+  }
+
+  /**
+   * Toggle transform selection and update UI indicator
+   * Single-select only - selecting one clears any previous selection
+   */
+  private toggleTransformSelection(type: TransformType, selected: boolean): void {
+    if (selected) {
+      // Single-select: clear ALL other selections first
+      this.selectedTransforms.clear();
+      // Update UI for all cards
+      const allCards = this.containerEl.querySelectorAll(".ai-assistant-transform-option-card.selected");
+      allCards.forEach(card => card.removeClass("selected"));
+      // Add the new selection
+      this.selectedTransforms.add(type);
+      // Re-add selected class to current card
+      const currentCard = this.containerEl.querySelector(`.ai-assistant-transform-option-card[data-transform="${type}"]`);
+      if (currentCard) currentCard.addClass("selected");
+    } else {
+      this.selectedTransforms.delete(type);
+    }
+    this.updateTransformIndicator();
+  }
+
+  /**
+   * Update the transform tags inside the textarea container
+   */
+  private updateTransformIndicator(): void {
+    // Remove existing tags container
+    if (this.transformTagsContainer) {
+      this.transformTagsContainer.remove();
+      this.transformTagsContainer = null;
+    }
+
+    if (this.selectedTransforms.size === 0) {
+      // Update placeholder back to normal
+      if (this.inputTextarea) {
+        this.inputTextarea.placeholder = "Ask me anything about your notes...";
+      }
+      return;
+    }
+
+    // Get the textarea container
+    const textareaContainer = this.containerEl.querySelector(".ai-assistant-textarea-container");
+    if (!textareaContainer) return;
+
+    // Create tags container inside textarea container (before textarea)
+    this.transformTagsContainer = document.createElement("div");
+    this.transformTagsContainer.className = "ai-assistant-transform-tags";
+    textareaContainer.insertBefore(this.transformTagsContainer, this.inputTextarea);
+
+    // Create individual tags for each selected transform
+    const transforms = Array.from(this.selectedTransforms);
+    for (const type of transforms) {
+      const tag = this.transformTagsContainer.createDiv({ cls: "ai-assistant-transform-tag" });
+      tag.dataset.transform = type;
+
+      // Icon
+      const tagIcon = tag.createDiv({ cls: "ai-assistant-transform-tag-icon" });
+      setIcon(tagIcon, TRANSFORM_ICONS[type]);
+
+      // Name
+      tag.createSpan({ text: TRANSFORM_NAMES[type], cls: "ai-assistant-transform-tag-name" });
+
+      // Remove button
+      const removeBtn = tag.createDiv({ cls: "ai-assistant-transform-tag-remove" });
+      setIcon(removeBtn, "x");
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.removeTransformSelection(type);
+      });
+    }
+
+    // Update placeholder to indicate transforms are selected
+    if (this.inputTextarea) {
+      this.inputTextarea.placeholder = "Add instructions (optional) or just send...";
+    }
+  }
+
+  /**
+   * Remove a single transform selection
+   */
+  private removeTransformSelection(type: TransformType): void {
+    this.selectedTransforms.delete(type);
+    // Update the expanded view if visible
+    const optionCard = this.containerEl.querySelector(`.ai-assistant-transform-option-card[data-transform="${type}"]`);
+    if (optionCard) {
+      optionCard.removeClass("selected");
+    }
+    this.updateTransformIndicator();
+  }
+
+  /**
+   * Clear transform selections after sending
+   */
+  private clearTransformSelections(): void {
+    this.selectedTransforms.clear();
+    // Clear any visible transform option cards
+    const optionCards = this.containerEl.querySelectorAll(".ai-assistant-transform-option-card");
+    optionCards.forEach(card => card.removeClass("selected"));
+    this.updateTransformIndicator();
   }
 
   /**
@@ -498,7 +748,10 @@ export class AIChatView extends ItemView {
    */
   public async sendMessage(overrideMessage?: string): Promise<void> {
     const message = overrideMessage ?? this.inputTextarea.value.trim();
-    if (!message || this.isLoading) {
+    const hasTransforms = this.selectedTransforms.size > 0;
+
+    // Allow sending if there's a message OR transforms are selected
+    if ((!message && !hasTransforms) || this.isLoading) {
       return;
     }
 
@@ -514,8 +767,17 @@ export class AIChatView extends ItemView {
       welcome.remove();
     }
 
+    // Build display message with transforms info
+    let displayMessage = message;
+    const selectedTransformsCopy = new Set(this.selectedTransforms); // Copy before clearing
+    if (selectedTransformsCopy.size > 0) {
+      const transformNames = Array.from(selectedTransformsCopy).map(t => TRANSFORM_NAMES[t]);
+      const transformInfo = `**Transform:** ${transformNames.join(", ")}`;
+      displayMessage = displayMessage ? `${transformInfo}\n\n${displayMessage}` : transformInfo;
+    }
+
     // Add user message
-    const userMessage = this.createChatMessage("user", message);
+    const userMessage = this.createChatMessage("user", displayMessage);
     this.chatHistory.push(userMessage);
     this.renderMessage(userMessage);
 
@@ -539,6 +801,15 @@ export class AIChatView extends ItemView {
         contextMessage = await this.buildReferencedNotesContext() + "\n\nUser Request: " + message;
       }
 
+      // Get transform prompt if transforms are selected
+      const transformPrompt = getTransformPrompt(this.selectedTransforms);
+      const hasTransformSelected = this.selectedTransforms.size > 0;
+
+      // Clear transform selections after capturing the prompt
+      if (hasTransformSelected) {
+        this.clearTransformSelections();
+      }
+
       // Build messages - limit to last 10 messages for context continuity
       const historyWithoutCurrent = this.chatHistory.slice(0, -1);
       const recentHistory = historyWithoutCurrent.slice(-10); // Keep last 10 messages (5 exchanges)
@@ -548,9 +819,11 @@ export class AIChatView extends ItemView {
         this.contextToggle.checked
       );
 
-      const systemPrompt = this.plugin.contextBuilder.buildSystemPrompt(
-        this.plugin.settings.systemPrompt
-      );
+      // When transform is selected, use transform prompt as system prompt
+      // Transform prompts are comprehensive and self-contained - no need to merge with main prompt
+      const systemPrompt = hasTransformSelected && transformPrompt
+        ? transformPrompt
+        : this.plugin.contextBuilder.buildSystemPrompt(this.plugin.settings.systemPrompt);
 
       let fullResponse = "";
 
@@ -571,6 +844,13 @@ export class AIChatView extends ItemView {
           messages,
           systemPrompt
         );
+        assistantMessage.content = fullResponse;
+        await this.updateMessageContent(contentEl, fullResponse);
+      }
+
+      // Strip markdown code block wrapper only for transform responses (Business, Pyramid, etc.)
+      if (hasTransformSelected) {
+        fullResponse = this.stripMarkdownWrapper(fullResponse);
         assistantMessage.content = fullResponse;
         await this.updateMessageContent(contentEl, fullResponse);
       }
@@ -858,6 +1138,111 @@ export class AIChatView extends ItemView {
         }
       });
     }
+
+    // Retry button - regenerate this response
+    const retryBtn = actionsEl.createEl("button", {
+      cls: "ai-assistant-action-btn-modern ai-assistant-action-retry",
+      attr: { "aria-label": "Retry" },
+    });
+    setIcon(retryBtn, "refresh-cw");
+    retryBtn.addEventListener("click", () => {
+      this.retryMessage(message, messageEl);
+    });
+  }
+
+  /**
+   * Retry/regenerate an assistant message
+   */
+  private async retryMessage(assistantMessage: ChatMessage, messageEl: HTMLElement): Promise<void> {
+    // Find the index of this assistant message in history
+    const assistantIndex = this.chatHistory.findIndex(m => m.id === assistantMessage.id);
+    if (assistantIndex === -1 || assistantIndex === 0) {
+      new Notice("Cannot retry this message");
+      return;
+    }
+
+    // Get the user message that preceded this assistant message
+    const userMessage = this.chatHistory[assistantIndex - 1];
+    if (!userMessage || userMessage.role !== "user") {
+      new Notice("Cannot find original request");
+      return;
+    }
+
+    // Store the original user content
+    const originalUserContent = userMessage.content;
+
+    // Remove the assistant message from UI
+    messageEl.remove();
+
+    // Remove assistant message from history (keep the user message)
+    this.chatHistory.splice(assistantIndex, 1);
+
+    // Set loading state
+    this.setLoading(true);
+
+    // Create new assistant message placeholder
+    const newAssistantMessage = this.createChatMessage("assistant", "");
+    this.chatHistory.push(newAssistantMessage);
+    const newMessageEl = this.renderMessage(newAssistantMessage, true);
+    const contentEl = newMessageEl.querySelector(
+      ".ai-assistant-message-content"
+    ) as HTMLElement;
+
+    try {
+      // Build messages - limit to last 10 messages for context
+      const historyWithoutCurrent = this.chatHistory.slice(0, -1);
+      const recentHistory = historyWithoutCurrent.slice(-10);
+      const messages = await this.plugin.contextBuilder.buildMessages(
+        recentHistory,
+        originalUserContent,
+        this.contextToggle.checked
+      );
+
+      const systemPrompt = this.plugin.contextBuilder.buildSystemPrompt(
+        this.plugin.settings.systemPrompt
+      );
+
+      let fullResponse = "";
+
+      if (this.plugin.settings.streamResponses) {
+        const stream = this.plugin.llmService.sendMessageStream(
+          messages,
+          systemPrompt
+        );
+
+        for await (const chunk of stream) {
+          fullResponse += chunk;
+          newAssistantMessage.content = fullResponse;
+          await this.updateMessageContent(contentEl, fullResponse);
+          this.scrollToBottom();
+        }
+      } else {
+        fullResponse = await this.plugin.llmService.sendMessage(
+          messages,
+          systemPrompt
+        );
+        newAssistantMessage.content = fullResponse;
+        await this.updateMessageContent(contentEl, fullResponse);
+      }
+
+      // Parse edit commands and mermaid blocks
+      newAssistantMessage.editCommands =
+        this.editProtocol.parseEditCommands(fullResponse);
+      newAssistantMessage.mermaidBlocks =
+        this.mermaidHandler.extractMermaidCode(fullResponse);
+
+      // Add action buttons
+      this.addMessageActions(newMessageEl, newAssistantMessage);
+      new Notice("Response regenerated");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      newAssistantMessage.content = `**Error regenerating response:** ${errorMessage}`;
+      await this.updateMessageContent(contentEl, newAssistantMessage.content);
+      // Still add action buttons so user can retry again
+      this.addMessageActions(newMessageEl, newAssistantMessage);
+    } finally {
+      this.setLoading(false);
+    }
   }
 
   /**
@@ -880,6 +1265,21 @@ export class AIChatView extends ItemView {
    */
   private scrollToBottom(): void {
     this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+  }
+
+  /**
+   * Strip markdown code block wrapper from response if entire response is wrapped
+   * e.g., ```markdown\n...\n``` or ```\n...\n```
+   */
+  private stripMarkdownWrapper(response: string): string {
+    const trimmed = response.trim();
+    // Check if response starts with ```markdown or ``` and ends with ```
+    const markdownBlockRegex = /^```(?:markdown)?\s*\n([\s\S]*?)\n```\s*$/;
+    const match = trimmed.match(markdownBlockRegex);
+    if (match) {
+      return match[1];
+    }
+    return response;
   }
 
   /**

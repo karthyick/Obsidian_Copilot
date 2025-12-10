@@ -31,7 +31,10 @@ export default class AIAssistantPlugin extends Plugin {
     // Initialize services
     this.noteController = new NoteController(this.app);
     this.llmService = new LLMServiceManager(this.settings);
-    this.contextBuilder = new ContextBuilder(this.noteController);
+    this.contextBuilder = new ContextBuilder(
+      this.noteController,
+      () => this.settings.excludedNotes
+    );
 
     // Register view
     this.registerView(VIEW_TYPE_AI_ASSISTANT, (leaf) => {

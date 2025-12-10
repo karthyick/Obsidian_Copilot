@@ -152,6 +152,22 @@ export class ModelFetcher {
   }
 
   /**
+   * Get fallback Bedrock models
+   */
+  public static getFallbackBedrockModels(): ModelInfo[] {
+    return [
+      { id: "anthropic.claude-sonnet-4-20250514-v1:0", name: "Claude Sonnet 4 (Latest)" },
+      { id: "anthropic.claude-3-5-sonnet-20241022-v2:0", name: "Claude 3.5 Sonnet v2" },
+      { id: "anthropic.claude-3-5-sonnet-20240620-v1:0", name: "Claude 3.5 Sonnet" },
+      { id: "anthropic.claude-3-5-haiku-20241022-v1:0", name: "Claude 3.5 Haiku" },
+      { id: "anthropic.claude-3-opus-20240229-v1:0", name: "Claude 3 Opus" },
+      { id: "anthropic.claude-3-sonnet-20240229-v1:0", name: "Claude 3 Sonnet" },
+      { id: "anthropic.claude-3-haiku-20240307-v1:0", name: "Claude 3 Haiku" },
+      { id: "other", name: "Other (Custom Model ID)" },
+    ];
+  }
+
+  /**
    * Get fallback Gemini models (when API key not available)
    */
   public static getFallbackGeminiModels(): ModelInfo[] {
@@ -161,6 +177,7 @@ export class ModelFetcher {
       { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
       { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
       { id: "gemini-1.5-flash-8b", name: "Gemini 1.5 Flash 8B" },
+      { id: "other", name: "Other (Custom Model ID)" },
     ];
   }
 
@@ -174,6 +191,7 @@ export class ModelFetcher {
       { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B Instant" },
       { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B" },
       { id: "gemma2-9b-it", name: "Gemma 2 9B" },
+      { id: "other", name: "Other (Custom Model ID)" },
     ];
   }
 }
