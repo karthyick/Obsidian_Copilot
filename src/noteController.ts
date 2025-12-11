@@ -307,7 +307,7 @@ export class NoteController {
   /**
    * Append text to the end of the note
    */
-  public async appendToNote(text: string): Promise<boolean> {
+  public appendToNote(text: string): boolean {
     const editor = this.getActiveEditor();
     if (!editor) {
       return false;
@@ -326,7 +326,7 @@ export class NoteController {
   /**
    * Prepend text to the beginning of the note (after frontmatter if present)
    */
-  public async prependToNote(text: string): Promise<boolean> {
+  public prependToNote(text: string): boolean {
     const editor = this.getActiveEditor();
     if (!editor) {
       return false;
@@ -348,7 +348,7 @@ export class NoteController {
   /**
    * Replace the entire content of the note
    */
-  public async replaceEntireContent(text: string): Promise<boolean> {
+  public replaceEntireContent(text: string): boolean {
     const editor = this.getActiveEditor();
     if (!editor) {
       return false;
@@ -396,11 +396,11 @@ export class NoteController {
   /**
    * Find and replace text in the note
    */
-  public async findAndReplace(
+  public findAndReplace(
     find: string,
     replace: string,
     replaceAll: boolean = false
-  ): Promise<number> {
+  ): number {
     const editor = this.getActiveEditor();
     if (!editor) {
       return 0;
@@ -416,7 +416,7 @@ export class NoteController {
 
       if (count > 0) {
         const newContent = content.replace(regex, replace);
-        await this.replaceEntireContent(newContent);
+        this.replaceEntireContent(newContent);
       }
     } else {
       const index = content.indexOf(find);
@@ -425,7 +425,7 @@ export class NoteController {
           content.substring(0, index) +
           replace +
           content.substring(index + find.length);
-        await this.replaceEntireContent(newContent);
+        this.replaceEntireContent(newContent);
         count = 1;
       }
     }
@@ -495,7 +495,7 @@ export class NoteController {
   /**
    * Insert content after a specific heading
    */
-  public async insertAfterHeading(heading: string, text: string): Promise<boolean> {
+  public insertAfterHeading(heading: string, text: string): boolean {
     const editor = this.getActiveEditor();
     if (!editor) {
       return false;
@@ -515,7 +515,7 @@ export class NoteController {
   /**
    * Update the content of a section under a heading
    */
-  public async updateSection(heading: string, newContent: string): Promise<boolean> {
+  public updateSection(heading: string, newContent: string): boolean {
     const editor = this.getActiveEditor();
     if (!editor) {
       return false;
@@ -544,7 +544,7 @@ export class NoteController {
   /**
    * Append content to a specific section
    */
-  public async appendToSection(heading: string, text: string): Promise<boolean> {
+  public appendToSection(heading: string, text: string): boolean {
     const editor = this.getActiveEditor();
     if (!editor) {
       return false;

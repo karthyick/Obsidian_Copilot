@@ -820,7 +820,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     const infoDiv = containerEl.createDiv({ cls: "ai-assistant-info" });
     infoDiv.createEl("p", {
-      text: "This plugin supports multiple AI providers. Configure at least one provider to start using the AI Assistant.",
+      text: "This plugin supports multiple AI providers. Configure at least one provider to start using the AI assistant.",
     });
 
     const listEl = infoDiv.createEl("ul");

@@ -42,7 +42,7 @@ export default class AIAssistantPlugin extends Plugin {
     });
 
     // Add ribbon icon
-    this.addRibbonIcon("bot", "AI Assistant", () => {
+    this.addRibbonIcon("bot", "AI assistant", () => {
       void this.activateView();
     });
 
@@ -68,7 +68,7 @@ export default class AIAssistantPlugin extends Plugin {
     // Open AI chat
     this.addCommand({
       id: "open-ai-chat",
-      name: "Open AI Assistant",
+      name: "Open AI assistant",
       callback: () => {
         void this.activateView();
       },
@@ -77,7 +77,7 @@ export default class AIAssistantPlugin extends Plugin {
     // Send note to AI
     this.addCommand({
       id: "send-note-to-ai",
-      name: "Send Note to AI",
+      name: "Send note to AI",
       editorCallback: async () => {
         await this.activateView();
         const content = await this.noteController.getActiveNoteContent();
@@ -93,7 +93,7 @@ export default class AIAssistantPlugin extends Plugin {
     // AI edit selection
     this.addCommand({
       id: "ai-edit-selection",
-      name: "AI Edit Selection",
+      name: "AI edit selection",
       editorCallback: async () => {
         const selection = this.noteController.getSelection();
         if (!selection) {
@@ -114,7 +114,7 @@ export default class AIAssistantPlugin extends Plugin {
     // Generate Mermaid diagram
     this.addCommand({
       id: "ai-generate-mermaid",
-      name: "Generate Mermaid Diagram",
+      name: "Generate Mermaid diagram",
       editorCallback: async () => {
         await this.activateView();
         if (this.chatView) {
@@ -129,7 +129,7 @@ export default class AIAssistantPlugin extends Plugin {
     // Quick fix grammar
     this.addCommand({
       id: "ai-fix-grammar",
-      name: "AI Fix Grammar",
+      name: "AI fix grammar",
       editorCallback: async () => {
         await this.activateView();
         if (this.chatView) {
@@ -144,7 +144,7 @@ export default class AIAssistantPlugin extends Plugin {
     // Expand content
     this.addCommand({
       id: "ai-expand-content",
-      name: "AI Expand Content",
+      name: "AI expand content",
       editorCallback: async () => {
         const selection = this.noteController.getSelection();
         await this.activateView();
@@ -168,7 +168,7 @@ export default class AIAssistantPlugin extends Plugin {
     // Clear chat
     this.addCommand({
       id: "ai-clear-chat",
-      name: "Clear AI Chat",
+      name: "Clear AI chat",
       callback: () => {
         if (this.chatView) {
           this.chatView.clearChat();
