@@ -1539,7 +1539,7 @@ Description of what the function does.
 **Example:**
 \`\`\`typescript
 const result = await functionName('value', 20);
-console.log(result); // { success: true, data: [...] }
+// Output: { success: true, data: [...] }
 \`\`\`
 
 **Throws:**

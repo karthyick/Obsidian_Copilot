@@ -153,8 +153,9 @@ export class GeminiService implements ILLMService {
     const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:streamGenerateContent?key=${this.settings.geminiApiKey}&alt=sse`;
 
     try {
-      // Obsidian's requestUrl doesn't support streaming directly,
-      // so we'll use fetch for streaming
+      // Obsidian's requestUrl doesn't support streaming responses,
+      // so we use fetch for SSE streaming which requires ReadableStream
+      // eslint-disable-next-line @typescript-eslint/no-restricted-imports
       const response = await fetch(url, {
         method: "POST",
         headers: {
