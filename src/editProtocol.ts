@@ -41,7 +41,7 @@ export class EditProtocol {
         const parsed = JSON.parse(jsonStr);
 
         if (this.isValidEditCommand(parsed)) {
-          commands.push(parsed as EditCommand);
+          commands.push(parsed);
         }
       } catch {
         // Failed to parse edit command, continue to next match
@@ -305,10 +305,10 @@ export class EditProtocol {
     };
   }
 
-  private async executeFindReplace(params: EditCommandParams): Promise<{
+  private executeFindReplace(params: EditCommandParams): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const find = params.find;
     const replace = params.replace ?? "";
     const replaceAll = params.all ?? false;
@@ -320,7 +320,7 @@ export class EditProtocol {
       };
     }
 
-    const count = await this.noteController.findAndReplace(
+    const count = this.noteController.findAndReplace(
       find,
       replace,
       replaceAll
@@ -339,10 +339,10 @@ export class EditProtocol {
     };
   }
 
-  private async executeUpdateSection(params: EditCommandParams): Promise<{
+  private executeUpdateSection(params: EditCommandParams): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const heading = params.heading;
     const content = params.content ?? params.text ?? "";
 
@@ -353,7 +353,7 @@ export class EditProtocol {
       };
     }
 
-    const result = await this.noteController.updateSection(heading, content);
+    const result = this.noteController.updateSection(heading, content);
 
     return {
       success: result,
@@ -363,13 +363,13 @@ export class EditProtocol {
     };
   }
 
-  private async executeAppend(params: EditCommandParams): Promise<{
+  private executeAppend(params: EditCommandParams): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const text = params.text ?? params.content ?? "";
 
-    const result = await this.noteController.appendToNote(text);
+    const result = this.noteController.appendToNote(text);
 
     return {
       success: result,
@@ -377,13 +377,13 @@ export class EditProtocol {
     };
   }
 
-  private async executePrepend(params: EditCommandParams): Promise<{
+  private executePrepend(params: EditCommandParams): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const text = params.text ?? params.content ?? "";
 
-    const result = await this.noteController.prependToNote(text);
+    const result = this.noteController.prependToNote(text);
 
     return {
       success: result,
@@ -391,13 +391,13 @@ export class EditProtocol {
     };
   }
 
-  private async executeReplaceAll(params: EditCommandParams): Promise<{
+  private executeReplaceAll(params: EditCommandParams): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const content = params.content ?? params.text ?? "";
 
-    const result = await this.noteController.replaceEntireContent(content);
+    const result = this.noteController.replaceEntireContent(content);
 
     return {
       success: result,
@@ -405,10 +405,10 @@ export class EditProtocol {
     };
   }
 
-  private async executeInsertAfterHeading(params: EditCommandParams): Promise<{
+  private executeInsertAfterHeading(params: EditCommandParams): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const heading = params.heading;
     const text = params.text ?? params.content ?? "";
 
@@ -419,7 +419,7 @@ export class EditProtocol {
       };
     }
 
-    const result = await this.noteController.insertAfterHeading(heading, text);
+    const result = this.noteController.insertAfterHeading(heading, text);
 
     return {
       success: result,

@@ -81,14 +81,14 @@ export class AIChatView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "AI Assistant";
+    return "Ai assistant";
   }
 
   getIcon(): string {
     return "bot";
   }
 
-  async onOpen(): Promise<void> {
+  onOpen(): void {
     const container = this.containerEl.children[1] as HTMLElement;
     container.empty();
     container.addClass("ai-assistant-container");
@@ -118,7 +118,7 @@ export class AIChatView extends ItemView {
     this.updateActiveNoteDisplay();
   }
 
-  async onClose(): Promise<void> {
+  onClose(): void {
     // Cleanup
   }
 
@@ -134,7 +134,7 @@ export class AIChatView extends ItemView {
     const titleRow = headerLeft.createDiv({ cls: "ai-assistant-title-row" });
     const logoIcon = titleRow.createSpan({ cls: "ai-assistant-logo" });
     setIcon(logoIcon, "bot");
-    titleRow.createSpan({ text: "AI Assistant", cls: "ai-assistant-title-text" });
+    titleRow.createSpan({ text: "AI assistant", cls: "ai-assistant-title-text" });
 
     // Provider and Model selectors row
     const selectorsRow = headerLeft.createDiv({ cls: "ai-assistant-selectors" });
@@ -201,8 +201,10 @@ export class AIChatView extends ItemView {
     });
     setIcon(settingsBtn, "settings");
     settingsBtn.addEventListener("click", () => {
-      (this.app as any).setting.open();
-      (this.app as any).setting.openTabById(this.plugin.manifest.id);
+      // Access Obsidian's internal settings API (not exposed in public types)
+      const app = this.app as App & { setting: { open: () => void; openTabById: (id: string) => void } };
+      app.setting.open();
+      app.setting.openTabById(this.plugin.manifest.id);
     });
 
     // Close button
@@ -1027,7 +1029,7 @@ export class AIChatView extends ItemView {
       displayText,
       contentEl,
       "",
-      this.plugin
+      this
     );
 
     // Add copy buttons to code blocks

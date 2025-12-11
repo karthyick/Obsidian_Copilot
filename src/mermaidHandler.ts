@@ -195,7 +195,7 @@ export class MermaidHandler {
     clean = clean.replace(/[()]/g, ' ');
 
     // Replace brackets with spaces
-    clean = clean.replace(/[\[\]]/g, ' ');
+    clean = clean.replace(/[[\]]/g, ' ');
 
     // Replace braces with spaces
     clean = clean.replace(/[{}]/g, ' ');
