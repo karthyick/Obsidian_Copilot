@@ -81,7 +81,7 @@ export class AIChatView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Ai assistant";
+    return "AI assistant";
   }
 
   getIcon(): string {
@@ -174,15 +174,17 @@ export class AIChatView extends ItemView {
     void this.updateModelSelector();
 
     this.modelSelector.addEventListener("change", () => {
-      const provider = this.plugin.settings.provider;
-      if (provider === "bedrock") {
-        this.plugin.settings.bedrockModelId = this.modelSelector.value;
-      } else if (provider === "gemini") {
-        this.plugin.settings.geminiModelId = this.modelSelector.value;
-      } else if (provider === "groq") {
-        this.plugin.settings.groqModelId = this.modelSelector.value;
-      }
-      void this.plugin.saveSettings();
+      void (async () => {
+        const provider = this.plugin.settings.provider;
+        if (provider === "bedrock") {
+          this.plugin.settings.bedrockModelId = this.modelSelector.value;
+        } else if (provider === "gemini") {
+          this.plugin.settings.geminiModelId = this.modelSelector.value;
+        } else if (provider === "groq") {
+          this.plugin.settings.groqModelId = this.modelSelector.value;
+        }
+        await this.plugin.saveSettings();
+      })();
     });
 
     // Right side - Actions
@@ -316,10 +318,11 @@ export class AIChatView extends ItemView {
     this.updateActiveNoteDisplay();
 
     this.contextToggle.addEventListener("change", () => {
-      this.plugin.settings.autoIncludeContext = this.contextToggle.checked;
-      void this.plugin.saveSettings().then(() => {
+      void (async () => {
+        this.plugin.settings.autoIncludeContext = this.contextToggle.checked;
+        await this.plugin.saveSettings();
         this.updateActiveNoteDisplay();
-      });
+      })();
     });
 
     // Referenced notes section
@@ -357,7 +360,7 @@ export class AIChatView extends ItemView {
     });
 
     // Handle @ mentions
-    this.inputTextarea.addEventListener("input", (e) => {
+    this.inputTextarea.addEventListener("input", (e: Event) => {
       const value = this.inputTextarea.value;
       const cursorPos = this.inputTextarea.selectionStart;
       const textBeforeCursor = value.substring(0, cursorPos);
@@ -372,7 +375,7 @@ export class AIChatView extends ItemView {
     this.inputTextarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        this.sendMessage();
+        void this.sendMessage();
       }
     });
 
@@ -383,7 +386,9 @@ export class AIChatView extends ItemView {
     });
     const sendIcon = this.sendButton.createSpan({ cls: "ai-assistant-send-icon" });
     setIcon(sendIcon, "send");
-    this.sendButton.addEventListener("click", () => this.sendMessage());
+    this.sendButton.addEventListener("click", () => {
+      void this.sendMessage();
+    });
 
     // Hint text
     const hintText = this.inputContainer.createDiv({ cls: "ai-assistant-hint" });
@@ -519,7 +524,7 @@ export class AIChatView extends ItemView {
 
       card.addEventListener("click", () => {
         // Auto-send when clicking suggestion cards for better UX
-        this.sendMessage(suggestion.text);
+        void this.sendMessage(suggestion.text);
       });
     }
 
@@ -1005,11 +1010,12 @@ export class AIChatView extends ItemView {
       });
       setIcon(copyBtn, "copy");
       copyBtn.addEventListener("click", () => {
-        void navigator.clipboard.writeText(message.content).then(() => {
+        void (async () => {
+          await navigator.clipboard.writeText(message.content);
           setIcon(copyBtn, "check");
           new Notice("Copied to clipboard");
           setTimeout(() => setIcon(copyBtn, "copy"), 2000);
-        });
+        })();
       });
     }
 
@@ -1109,21 +1115,20 @@ export class AIChatView extends ItemView {
       } else {
         setIcon(applyBtn, "edit");
         applyBtn.addEventListener("click", () => {
-          void this.editProtocol.executeCommands(
+          const results = this.editProtocol.executeCommands(
             message.editCommands!
-          ).then((results) => {
-            const allSuccess = results.every((r) => r.success);
-            if (allSuccess) {
-              message.applied = true;
-              setIcon(applyBtn, "check-circle");
-              applyBtn.disabled = true;
-              applyBtn.addClass("ai-assistant-action-applied");
-              new Notice("Edit applied successfully");
-            } else {
-              const failedResult = results.find((r) => !r.success);
-              new Notice(`Edit failed: ${failedResult?.message}`);
-            }
-          });
+          );
+          const allSuccess = results.every((r) => r.success);
+          if (allSuccess) {
+            message.applied = true;
+            setIcon(applyBtn, "check-circle");
+            applyBtn.disabled = true;
+            applyBtn.addClass("ai-assistant-action-applied");
+            new Notice("Edit applied successfully");
+          } else {
+            const failedResult = results.find((r) => !r.success);
+            new Notice(`Edit failed: ${failedResult?.message}`);
+          }
         });
       }
     }
@@ -1153,7 +1158,7 @@ export class AIChatView extends ItemView {
     });
     setIcon(retryBtn, "refresh-cw");
     retryBtn.addEventListener("click", () => {
-      this.retryMessage(message, messageEl);
+      void this.retryMessage(message, messageEl);
     });
   }
 

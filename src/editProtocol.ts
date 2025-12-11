@@ -115,7 +115,7 @@ export class EditProtocol {
       return false;
     }
 
-    const validActions: EditAction[] = [
+    const validActions: string[] = [
       "replace_selection",
       "insert_at_cursor",
       "replace_range",
@@ -127,7 +127,7 @@ export class EditProtocol {
       "insert_after_heading",
     ];
 
-    if (!validActions.includes(command.action as EditAction)) {
+    if (!validActions.includes(command.action)) {
       return false;
     }
 
@@ -141,10 +141,10 @@ export class EditProtocol {
   /**
    * Execute a single edit command
    */
-  public async executeCommand(command: EditCommand): Promise<{
+  public executeCommand(command: EditCommand): {
     success: boolean;
     message: string;
-  }> {
+  } {
     const { action, params } = command;
 
     try {
@@ -193,9 +193,9 @@ export class EditProtocol {
   /**
    * Execute multiple commands in sequence
    */
-  public async executeCommands(
+  public executeCommands(
     commands: EditCommand[]
-  ): Promise<Array<{ command: EditCommand; success: boolean; message: string }>> {
+  ): Array<{ command: EditCommand; success: boolean; message: string }> {
     const results: Array<{
       command: EditCommand;
       success: boolean;
@@ -203,7 +203,7 @@ export class EditProtocol {
     }> = [];
 
     for (const command of commands) {
-      const result = await this.executeCommand(command);
+      const result = this.executeCommand(command);
       results.push({
         command,
         success: result.success,

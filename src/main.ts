@@ -20,7 +20,6 @@ export default class AIAssistantPlugin extends Plugin {
   llmService: LLMServiceManager;
   noteController: NoteController;
   contextBuilder: ContextBuilder;
-  private chatView: AIChatView | null = null;
 
   async onload(): Promise<void> {
     // Load settings
@@ -34,12 +33,11 @@ export default class AIAssistantPlugin extends Plugin {
       () => this.settings.excludedNotes
     );
 
-    // Register view - create view directly without assigning to plugin property
-    this.registerView(VIEW_TYPE_AI_ASSISTANT, (leaf) => {
-      const view = new AIChatView(leaf, this);
-      this.chatView = view;
-      return view;
-    });
+    // Register view
+    this.registerView(
+      VIEW_TYPE_AI_ASSISTANT,
+      (leaf) => new AIChatView(leaf, this)
+    );
 
     // Add ribbon icon
     this.addRibbonIcon("bot", "AI assistant", () => {
@@ -58,7 +56,6 @@ export default class AIAssistantPlugin extends Plugin {
 
   onunload(): void {
     // Clean up - don't detach leaves to preserve user's layout
-    this.chatView = null;
   }
 
   /**
@@ -81,8 +78,9 @@ export default class AIAssistantPlugin extends Plugin {
       editorCallback: async () => {
         await this.activateView();
         const content = await this.noteController.getActiveNoteContent();
-        if (content && this.chatView) {
-          await this.chatView.setInputAndSend(
+        const chatView = this.getChatView();
+        if (content && chatView) {
+          await chatView.setInputAndSend(
             "Please analyze and summarize this note.",
             true
           );
@@ -102,8 +100,9 @@ export default class AIAssistantPlugin extends Plugin {
         }
 
         await this.activateView();
-        if (this.chatView) {
-          await this.chatView.setInputAndSend(
+        const chatView = this.getChatView();
+        if (chatView) {
+          await chatView.setInputAndSend(
             `Please improve or edit the following selected text:\n\n"${selection}"`,
             false
           );
@@ -117,8 +116,9 @@ export default class AIAssistantPlugin extends Plugin {
       name: "Generate Mermaid diagram",
       editorCallback: async () => {
         await this.activateView();
-        if (this.chatView) {
-          await this.chatView.setInputAndSend(
+        const chatView = this.getChatView();
+        if (chatView) {
+          await chatView.setInputAndSend(
             "Based on the content of this note, create a Mermaid diagram that visualizes the key concepts or relationships.",
             true
           );
@@ -132,8 +132,9 @@ export default class AIAssistantPlugin extends Plugin {
       name: "AI fix grammar",
       editorCallback: async () => {
         await this.activateView();
-        if (this.chatView) {
-          await this.chatView.setInputAndSend(
+        const chatView = this.getChatView();
+        if (chatView) {
+          await chatView.setInputAndSend(
             "Please fix any grammar and spelling errors in this note while preserving the original meaning and formatting.",
             true
           );
@@ -149,14 +150,15 @@ export default class AIAssistantPlugin extends Plugin {
         const selection = this.noteController.getSelection();
         await this.activateView();
 
-        if (this.chatView) {
+        const chatView = this.getChatView();
+        if (chatView) {
           if (selection) {
-            await this.chatView.setInputAndSend(
+            await chatView.setInputAndSend(
               `Please expand on the following selected text, adding more detail and context:\n\n"${selection}"`,
               true
             );
           } else {
-            await this.chatView.setInputAndSend(
+            await chatView.setInputAndSend(
               "Please expand on the main topics in this note, adding more detail and context where appropriate.",
               true
             );
@@ -170,8 +172,9 @@ export default class AIAssistantPlugin extends Plugin {
       id: "ai-clear-chat",
       name: "Clear AI chat",
       callback: () => {
-        if (this.chatView) {
-          this.chatView.clearChat();
+        const chatView = this.getChatView();
+        if (chatView) {
+          chatView.clearChat();
         }
       },
     });
@@ -204,8 +207,9 @@ export default class AIAssistantPlugin extends Plugin {
     if (leaf) {
       workspace.revealLeaf(leaf);
       // Focus the input
-      if (this.chatView) {
-        this.chatView.focusInput();
+      const chatView = this.getChatView();
+      if (chatView) {
+        chatView.focusInput();
       }
     }
   }
@@ -273,7 +277,15 @@ export default class AIAssistantPlugin extends Plugin {
    * Get the active chat view instance
    */
   getChatView(): AIChatView | null {
-    return this.chatView;
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_ASSISTANT);
+    if (leaves.length === 0) {
+      return null;
+    }
+    const view = leaves[0].view;
+    if (view instanceof AIChatView) {
+      return view;
+    }
+    return null;
   }
 
   /**

@@ -54,6 +54,15 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  // Utility wrappers to convert async functions to void-returning callbacks.
+  private wrapVoid<T>(fn: (value: T) => Promise<void>) {
+    return (value: T) => void fn(value);
+  }
+
+  private wrapVoid0(fn: () => Promise<void>) {
+    return () => void fn();
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
@@ -61,7 +70,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Add glassmorphism class to settings container
     containerEl.addClass("ai-assistant-settings");
 
-    new Setting(containerEl).setName("AI Assistant").setHeading();
+    new Setting(containerEl).setName("AI assistant").setHeading();
 
     // Provider Selection Section
     this.renderProviderSection(containerEl);
@@ -85,22 +94,22 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render provider selection section
    */
   private renderProviderSection(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("AI provider").setHeading();
+    new Setting(containerEl).setName("AI provider settings").setHeading();
 
     new Setting(containerEl)
-      .setName("Active provider")
+      .setName("Active AI provider")
       .setDesc("Select which AI provider to use")
       .addDropdown((dropdown) => {
         for (const [value, label] of Object.entries(PROVIDER_NAMES)) {
           dropdown.addOption(value, label);
         }
         dropdown.setValue(this.plugin.settings.provider);
-        dropdown.onChange(async (value) => {
+        dropdown.onChange(this.wrapVoid(async (value) => {
           this.plugin.settings.provider = value as AIProvider;
           await this.plugin.saveSettings();
           this.plugin.reinitializeLLMService();
           this.display(); // Refresh to show/hide relevant settings
-        });
+        }));
       });
 
     // Provider status badges
@@ -153,7 +162,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    new Setting(section).setName("AWS Bedrock (Claude)").setHeading();
+    new Setting(section).setName("AWS Bedrock settings").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
@@ -163,29 +172,29 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     }
 
     new Setting(section)
-      .setName("AWS access key ID")
+      .setName("AWS access key")
       .setDesc("Your AWS access key ID")
       .addText((text) =>
         text
           .setPlaceholder("Enter your access key ID")
           .setValue(this.plugin.settings.awsAccessKeyId)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.awsAccessKeyId = value;
             await this.plugin.saveSettings();
-          })
+          }))
       );
 
     new Setting(section)
-      .setName("AWS secret access key")
+      .setName("AWS secret key")
       .setDesc("Your AWS secret access key")
       .addText((text) => {
         text
           .setPlaceholder("Enter your secret access key")
           .setValue(this.plugin.settings.awsSecretAccessKey)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.awsSecretAccessKey = value;
             await this.plugin.saveSettings();
-          });
+          }));
         text.inputEl.type = "password";
         return text;
       });
@@ -197,10 +206,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         text
           .setPlaceholder("Enter session token (if using temporary credentials)")
           .setValue(this.plugin.settings.awsSessionToken)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.awsSessionToken = value;
             await this.plugin.saveSettings();
-          });
+          }));
         text.inputEl.type = "password";
         return text;
       });
@@ -212,11 +221,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         text
           .setPlaceholder("e.g., us-east-1")
           .setValue(this.plugin.settings.awsRegion)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.awsRegion = value.trim();
             await this.plugin.saveSettings();
             this.plugin.reinitializeLLMService();
-          })
+          }))
       );
 
     new Setting(section)
@@ -226,22 +235,22 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         this.bedrockDropdown = dropdown;
         this.populateBedrockDropdown(dropdown);
         dropdown.setValue(this.plugin.settings.bedrockModelId);
-        dropdown.onChange(async (value) => {
+        dropdown.onChange(this.wrapVoid(async (value) => {
           this.plugin.settings.bedrockModelId = value;
           await this.plugin.saveSettings();
           this.display(); // Refresh to show/hide custom model textbox
-        });
+        }));
       })
       .addButton((button) =>
         button
           .setIcon("refresh-cw")
           .setTooltip("Refresh models list")
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             button.setDisabled(true);
             await this.refreshBedrockModels();
             button.setDisabled(false);
             new Notice("Bedrock models refreshed");
-          })
+          }))
       );
 
     // Custom model ID textbox (shown when "Other" is selected)
@@ -253,10 +262,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           text
             .setPlaceholder("Enter custom model ID")
             .setValue(this.plugin.settings.bedrockCustomModelId)
-            .onChange(async (value) => {
+            .onChange(this.wrapVoid(async (value) => {
               this.plugin.settings.bedrockCustomModelId = value.trim();
               await this.plugin.saveSettings();
-            })
+            }))
         );
     }
 
@@ -268,9 +277,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         button
           .setButtonText("Test connection")
           .setCta()
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             await this.testProviderConnection("bedrock", button);
-          })
+          }))
       );
   }
 
@@ -284,7 +293,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    new Setting(section).setName("Google Gemini").setHeading();
+    new Setting(section).setName("Google Gemini settings").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
@@ -300,12 +309,12 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         text
           .setPlaceholder("Enter your Gemini API key")
           .setValue(this.plugin.settings.geminiApiKey)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.geminiApiKey = value;
             await this.plugin.saveSettings();
             // Refresh models when API key changes
             void this.refreshGeminiModels();
-          });
+          }));
         text.inputEl.type = "password";
         return text;
       });
@@ -317,22 +326,22 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         this.geminiDropdown = dropdown;
         this.populateGeminiDropdown(dropdown);
         dropdown.setValue(this.plugin.settings.geminiModelId);
-        dropdown.onChange(async (value) => {
+        dropdown.onChange(this.wrapVoid(async (value) => {
           this.plugin.settings.geminiModelId = value;
           await this.plugin.saveSettings();
           this.display(); // Refresh to show/hide custom model textbox
-        });
+        }));
       })
       .addButton((button) =>
         button
           .setIcon("refresh-cw")
           .setTooltip("Refresh models from API")
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             button.setDisabled(true);
             await this.refreshGeminiModels();
             button.setDisabled(false);
             new Notice("Gemini models refreshed");
-          })
+          }))
       );
 
     // Custom model ID textbox (shown when "Other" is selected)
@@ -344,10 +353,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           text
             .setPlaceholder("Enter custom model ID")
             .setValue(this.plugin.settings.geminiCustomModelId)
-            .onChange(async (value) => {
+            .onChange(this.wrapVoid(async (value) => {
               this.plugin.settings.geminiCustomModelId = value.trim();
               await this.plugin.saveSettings();
-            })
+            }))
         );
     }
 
@@ -359,9 +368,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         button
           .setButtonText("Test connection")
           .setCta()
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             await this.testProviderConnection("gemini", button);
-          })
+          }))
       );
 
     // API Key link
@@ -467,7 +476,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    new Setting(section).setName("Groq").setHeading();
+    new Setting(section).setName("Groq settings").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
@@ -483,12 +492,12 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         text
           .setPlaceholder("Enter your Groq API key")
           .setValue(this.plugin.settings.groqApiKey)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.groqApiKey = value;
             await this.plugin.saveSettings();
             // Refresh models when API key changes
             void this.refreshGroqModels();
-          });
+          }));
         text.inputEl.type = "password";
         return text;
       });
@@ -500,22 +509,22 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         this.groqDropdown = dropdown;
         this.populateGroqDropdown(dropdown);
         dropdown.setValue(this.plugin.settings.groqModelId);
-        dropdown.onChange(async (value) => {
+        dropdown.onChange(this.wrapVoid(async (value) => {
           this.plugin.settings.groqModelId = value;
           await this.plugin.saveSettings();
           this.display(); // Refresh to show/hide custom model textbox
-        });
+        }));
       })
       .addButton((button) =>
         button
           .setIcon("refresh-cw")
           .setTooltip("Refresh models from API")
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             button.setDisabled(true);
             await this.refreshGroqModels();
             button.setDisabled(false);
             new Notice("Groq models refreshed");
-          })
+          }))
       );
 
     // Custom model ID textbox (shown when "Other" is selected)
@@ -527,10 +536,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           text
             .setPlaceholder("Enter custom model ID")
             .setValue(this.plugin.settings.groqCustomModelId)
-            .onChange(async (value) => {
+            .onChange(this.wrapVoid(async (value) => {
               this.plugin.settings.groqCustomModelId = value.trim();
               await this.plugin.saveSettings();
-            })
+            }))
         );
     }
 
@@ -542,9 +551,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         button
           .setButtonText("Test connection")
           .setCta()
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             await this.testProviderConnection("groq", button);
-          })
+          }))
       );
 
     // API Key link
@@ -634,7 +643,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render common settings
    */
   private renderCommonSettings(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("Generation").setHeading();
+    new Setting(containerEl).setName("Generation settings").setHeading();
 
     new Setting(containerEl)
       .setName("Max tokens")
@@ -644,10 +653,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           .setLimits(256, 4096, 256)
           .setValue(this.plugin.settings.maxTokens)
           .setDynamicTooltip()
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.maxTokens = value;
             await this.plugin.saveSettings();
-          })
+          }))
       );
 
     new Setting(containerEl)
@@ -658,13 +667,13 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           .setLimits(0, 1, 0.1)
           .setValue(this.plugin.settings.temperature)
           .setDynamicTooltip()
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.temperature = value;
             await this.plugin.saveSettings();
-          })
+          }))
       );
 
-    new Setting(containerEl).setName("Behavior").setHeading();
+    new Setting(containerEl).setName("Behavior settings").setHeading();
 
     new Setting(containerEl)
       .setName("Auto-include note context")
@@ -672,10 +681,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.autoIncludeContext)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.autoIncludeContext = value;
             await this.plugin.saveSettings();
-          })
+          }))
       );
 
     new Setting(containerEl)
@@ -684,10 +693,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.streamResponses)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.streamResponses = value;
             await this.plugin.saveSettings();
-          })
+          }))
       );
 
     // Excluded Notes Section
@@ -717,7 +726,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             const modal = new ExcludedNoteSuggesterModal(
               this.app,
               this.plugin.settings.excludedNotes,
-              async (file) => {
+              this.wrapVoid(async (file) => {
                 if (!this.plugin.settings.excludedNotes.includes(file.path)) {
                   this.plugin.settings.excludedNotes.push(file.path);
                   await this.plugin.saveSettings();
@@ -726,7 +735,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
                 } else {
                   new Notice(`"${file.basename}" is already excluded`);
                 }
-              }
+              })
             );
             modal.open();
           })
@@ -751,7 +760,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           attr: { "aria-label": "Remove from exclusion list" },
         });
         setIcon(removeBtn, "trash-2");
-        removeBtn.addEventListener("click", async () => {
+        removeBtn.addEventListener("click", this.wrapVoid0(async () => {
           this.plugin.settings.excludedNotes = this.plugin.settings.excludedNotes.filter(
             (p) => p !== notePath
           );
@@ -759,7 +768,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           this.display();
           const basename = notePath.split("/").pop()?.replace(".md", "") || notePath;
           new Notice(`Removed "${basename}" from excluded notes`);
-        });
+        }));
       }
     } else {
       containerEl.createEl("p", {
@@ -786,10 +795,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         text
           .setPlaceholder("Leave empty for default prompt...")
           .setValue(this.plugin.settings.systemPrompt)
-          .onChange(async (value) => {
+          .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.systemPrompt = value;
             await this.plugin.saveSettings();
-          });
+          }));
         text.inputEl.rows = 10;
         text.inputEl.cols = 50;
         text.inputEl.addClass("ai-assistant-system-prompt-textarea");
@@ -803,12 +812,12 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         button
           .setButtonText("Reset to default")
           .setWarning()
-          .onClick(async () => {
+          .onClick(this.wrapVoid0(async () => {
             this.plugin.settings.systemPrompt = "";
             await this.plugin.saveSettings();
             this.display();
             new Notice("System prompt reset to default");
-          })
+          }))
       );
   }
 
@@ -816,7 +825,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render info section
    */
   private renderInfoSection(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("Information").setHeading();
+    new Setting(containerEl).setName("About").setHeading();
 
     const infoDiv = containerEl.createDiv({ cls: "ai-assistant-info" });
     infoDiv.createEl("p", {
