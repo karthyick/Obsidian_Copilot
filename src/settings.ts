@@ -94,7 +94,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render provider selection section
    */
   private renderProviderSection(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("AI provider settings").setHeading();
+    new Setting(containerEl).setName("AI provider").setHeading();
 
     new Setting(containerEl)
       .setName("Active AI provider")
@@ -162,17 +162,17 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    new Setting(section).setName("AWS Bedrock settings").setHeading();
+    new Setting(section).setName("AWS Bedrock").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
-        text: "Switch to AWS Bedrock provider to use these settings.",
+        text: "Switch to AWS Bedrock provider to configure it.",
         cls: "setting-item-description",
       });
     }
 
     new Setting(section)
-      .setName("AWS access key")
+      .setName("Access key")
       .setDesc("Your AWS access key ID")
       .addText((text) =>
         text
@@ -185,7 +185,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
 
     new Setting(section)
-      .setName("AWS secret key")
+      .setName("Secret key")
       .setDesc("Your AWS secret access key")
       .addText((text) => {
         text
@@ -200,7 +200,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       });
 
     new Setting(section)
-      .setName("AWS session token (optional)")
+      .setName("Session token (optional)")
       .setDesc("Session token for temporary credentials")
       .addText((text) => {
         text
@@ -215,11 +215,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       });
 
     new Setting(section)
-      .setName("AWS region")
+      .setName("Region")
       .setDesc("AWS region where Bedrock is enabled (e.g., us-east-1, us-west-2, ap-south-1)")
       .addText((text) =>
         text
-          .setPlaceholder("e.g., us-east-1")
+          .setPlaceholder("Region code")
           .setValue(this.plugin.settings.awsRegion)
           .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.awsRegion = value.trim();
@@ -256,8 +256,8 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Custom model ID textbox (shown when "Other" is selected)
     if (this.plugin.settings.bedrockModelId === "other") {
       new Setting(section)
-        .setName("Custom model ID")
-        .setDesc("Enter the full Bedrock model ID (e.g., anthropic.claude-3-opus-20240229-v1:0)")
+        .setName("Custom model")
+        .setDesc("Full Bedrock model ID")
         .addText((text) =>
           text
             .setPlaceholder("Enter custom model ID")
@@ -271,11 +271,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Test Connection Button
     new Setting(section)
-      .setName("Test connection")
+      .setName("Connection")
       .setDesc("Verify your AWS credentials and model access")
       .addButton((button) =>
         button
-          .setButtonText("Test connection")
+          .setButtonText("Test")
           .setCta()
           .onClick(this.wrapVoid0(async () => {
             await this.testProviderConnection("bedrock", button);
@@ -293,21 +293,21 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    new Setting(section).setName("Google Gemini settings").setHeading();
+    new Setting(section).setName("Google Gemini").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
-        text: "Switch to Google Gemini provider to use these settings.",
+        text: "Switch to Google Gemini provider to configure it.",
         cls: "setting-item-description",
       });
     }
 
     new Setting(section)
-      .setName("Gemini API key")
-      .setDesc("Your Google AI Studio API key")
+      .setName("API key")
+      .setDesc("Google AI Studio API key")
       .addText((text) => {
         text
-          .setPlaceholder("Enter your Gemini API key")
+          .setPlaceholder("Enter API key")
           .setValue(this.plugin.settings.geminiApiKey)
           .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.geminiApiKey = value;
@@ -347,8 +347,8 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Custom model ID textbox (shown when "Other" is selected)
     if (this.plugin.settings.geminiModelId === "other") {
       new Setting(section)
-        .setName("Custom model ID")
-        .setDesc("Enter the Gemini model ID (e.g., gemini-1.5-pro-latest)")
+        .setName("Custom model")
+        .setDesc("Gemini model ID")
         .addText((text) =>
           text
             .setPlaceholder("Enter custom model ID")
@@ -362,11 +362,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Test Connection Button
     new Setting(section)
-      .setName("Test connection")
+      .setName("Connection")
       .setDesc("Verify your Gemini API key")
       .addButton((button) =>
         button
-          .setButtonText("Test connection")
+          .setButtonText("Test")
           .setCta()
           .onClick(this.wrapVoid0(async () => {
             await this.testProviderConnection("gemini", button);
@@ -376,7 +376,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // API Key link
     const linkContainer = section.createDiv({ cls: "ai-assistant-link" });
     const link = linkContainer.createEl("a", {
-      text: "Get a Gemini API key from Google AI Studio",
+      text: "Google AI Studio",
       href: "https://aistudio.google.com/app/apikey",
     });
     link.setAttr("target", "_blank");
@@ -476,21 +476,21 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    new Setting(section).setName("Groq settings").setHeading();
+    new Setting(section).setName("Groq").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
-        text: "Switch to Groq provider to use these settings.",
+        text: "Switch to Groq provider to configure it.",
         cls: "setting-item-description",
       });
     }
 
     new Setting(section)
-      .setName("Groq API key")
+      .setName("API key")
       .setDesc("Your Groq API key")
       .addText((text) => {
         text
-          .setPlaceholder("Enter your Groq API key")
+          .setPlaceholder("Enter API key")
           .setValue(this.plugin.settings.groqApiKey)
           .onChange(this.wrapVoid(async (value) => {
             this.plugin.settings.groqApiKey = value;
@@ -530,8 +530,8 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Custom model ID textbox (shown when "Other" is selected)
     if (this.plugin.settings.groqModelId === "other") {
       new Setting(section)
-        .setName("Custom model ID")
-        .setDesc("Enter the Groq model ID (e.g., llama-3.2-90b-text-preview)")
+        .setName("Custom model")
+        .setDesc("Groq model ID")
         .addText((text) =>
           text
             .setPlaceholder("Enter custom model ID")
@@ -545,11 +545,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Test Connection Button
     new Setting(section)
-      .setName("Test connection")
+      .setName("Connection")
       .setDesc("Verify your Groq API key")
       .addButton((button) =>
         button
-          .setButtonText("Test connection")
+          .setButtonText("Test")
           .setCta()
           .onClick(this.wrapVoid0(async () => {
             await this.testProviderConnection("groq", button);
@@ -559,7 +559,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // API Key link
     const linkContainer = section.createDiv({ cls: "ai-assistant-link" });
     const link = linkContainer.createEl("a", {
-      text: "Get a Groq API key from GroqCloud",
+      text: "Get an API key from GroqCloud",
       href: "https://console.groq.com/keys",
     });
     link.setAttr("target", "_blank");
@@ -635,7 +635,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
     } finally {
       button.setDisabled(false);
-      button.setButtonText("Test connection");
+      button.setButtonText("Test");
     }
   }
 
@@ -643,7 +643,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render common settings
    */
   private renderCommonSettings(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("Generation settings").setHeading();
+    new Setting(containerEl).setName("Generation").setHeading();
 
     new Setting(containerEl)
       .setName("Max tokens")
@@ -673,7 +673,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           }))
       );
 
-    new Setting(containerEl).setName("Behavior settings").setHeading();
+    new Setting(containerEl).setName("Behavior").setHeading();
 
     new Setting(containerEl)
       .setName("Auto-include note context")
@@ -834,13 +834,13 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     const listEl = infoDiv.createEl("ul");
     listEl.createEl("li", {
-      text: "AWS Bedrock: Requires AWS account with Bedrock access and Claude models enabled",
+      text: "AWS Bedrock: requires AWS account with Bedrock access and Claude models enabled",
     });
     listEl.createEl("li", {
-      text: "Google Gemini: Requires Google AI Studio API key (free tier available)",
+      text: "Google Gemini: requires Google AI Studio API key (free tier available)",
     });
     listEl.createEl("li", {
-      text: "Groq: Requires Groq API key (free tier available with rate limits)",
+      text: "Groq: requires Groq API key (free tier available with rate limits)",
     });
   }
 }

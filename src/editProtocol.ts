@@ -1,5 +1,5 @@
 import { NoteController } from "./noteController";
-import { EditCommand, EditAction, EditCommandParams } from "./types";
+import { EditCommand, EditCommandParams } from "./types";
 
 /**
  * Parser and executor for AI edit commands
