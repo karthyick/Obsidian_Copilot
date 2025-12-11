@@ -61,7 +61,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Add glassmorphism class to settings container
     containerEl.addClass("ai-assistant-settings");
 
-    new Setting(containerEl).setName("AI Assistant settings").setHeading();
+    new Setting(containerEl).setName("AI Assistant").setHeading();
 
     // Provider Selection Section
     this.renderProviderSection(containerEl);
@@ -634,7 +634,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render common settings
    */
   private renderCommonSettings(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName("Generation settings").setHeading();
+    new Setting(containerEl).setName("Generation").setHeading();
 
     new Setting(containerEl)
       .setName("Max tokens")
@@ -801,7 +801,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .setDesc("Reset to the default system prompt")
       .addButton((button) =>
         button
-          .setButtonText("Reset to Default")
+          .setButtonText("Reset to default")
           .setWarning()
           .onClick(async () => {
             this.plugin.settings.systemPrompt = "";

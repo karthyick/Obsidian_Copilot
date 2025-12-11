@@ -325,7 +325,7 @@ export class AIChatView extends ItemView {
       attr: { "aria-label": "Add note reference" },
     });
     setIcon(addRefBtn, "file-plus");
-    addRefBtn.createSpan({ text: "Add Note Reference" });
+    addRefBtn.createSpan({ text: "Add note reference" });
     addRefBtn.addEventListener("click", () => this.openNoteSuggester());
 
     this.referencedNotesContainer = referencesRow.createDiv({ cls: "ai-assistant-referenced-notes" });
@@ -344,11 +344,11 @@ export class AIChatView extends ItemView {
       },
     });
 
-    // Auto-resize textarea
+    // Auto-resize textarea - requires dynamic height calculation based on content
     this.inputTextarea.addEventListener("input", () => {
-      this.inputTextarea.style.height = "auto";
+      this.inputTextarea.setCssStyles({ height: "auto" });
       const newHeight = Math.min(Math.max(this.inputTextarea.scrollHeight, 44), 200);
-      this.inputTextarea.style.height = newHeight + "px";
+      this.inputTextarea.setCssStyles({ height: `${newHeight}px` });
     });
 
     // Handle @ mentions
@@ -569,7 +569,7 @@ export class AIChatView extends ItemView {
     const headerTitle = header.createDiv({ cls: "ai-assistant-transform-header-title" });
     const titleIcon = headerTitle.createSpan();
     setIcon(titleIcon, "shuffle");
-    headerTitle.createSpan({ text: "Transform Document" });
+    headerTitle.createSpan({ text: "Transform document" });
 
     // Description
     expandedView.createEl("p", {
@@ -614,7 +614,7 @@ export class AIChatView extends ItemView {
 
     const clearBtn = actions.createEl("button", {
       cls: "ai-assistant-transform-clear-btn",
-      text: "Clear All"
+      text: "Clear all"
     });
     clearBtn.addEventListener("click", () => {
       this.selectedTransforms.clear();
@@ -757,7 +757,7 @@ export class AIChatView extends ItemView {
     // Clear input
     if (!overrideMessage) {
       this.inputTextarea.value = "";
-      this.inputTextarea.style.height = "auto";
+      this.inputTextarea.setCssStyles({ height: "auto" });
     }
 
     // Remove welcome message

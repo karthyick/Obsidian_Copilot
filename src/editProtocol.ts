@@ -43,9 +43,8 @@ export class EditProtocol {
         if (this.isValidEditCommand(parsed)) {
           commands.push(parsed as EditCommand);
         }
-      } catch (error) {
-        console.error("Failed to parse edit command:", error);
-        // Continue to next match
+      } catch {
+        // Failed to parse edit command, continue to next match
       }
     }
 

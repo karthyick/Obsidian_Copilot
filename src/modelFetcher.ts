@@ -30,7 +30,6 @@ export class ModelFetcher {
       });
 
       if (response.status !== 200) {
-        console.error("Failed to fetch Gemini models:", response.status);
         return [];
       }
 
@@ -71,8 +70,7 @@ export class ModelFetcher {
       });
 
       return models;
-    } catch (error) {
-      console.error("Error fetching Gemini models:", error);
+    } catch {
       return [];
     }
   }
@@ -95,7 +93,6 @@ export class ModelFetcher {
       });
 
       if (response.status !== 200) {
-        console.error("Failed to fetch Groq models:", response.status);
         return [];
       }
 
@@ -119,8 +116,7 @@ export class ModelFetcher {
       models.sort((a, b) => a.name.localeCompare(b.name));
 
       return models;
-    } catch (error) {
-      console.error("Error fetching Groq models:", error);
+    } catch {
       return [];
     }
   }

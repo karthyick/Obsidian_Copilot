@@ -136,7 +136,9 @@ export class GroqService implements ILLMService {
     };
 
     try {
-      // Use fetch for streaming support
+      // Obsidian's requestUrl doesn't support streaming responses,
+      // so we use fetch for SSE streaming which requires ReadableStream
+      // eslint-disable-next-line @typescript-eslint/no-restricted-imports
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
