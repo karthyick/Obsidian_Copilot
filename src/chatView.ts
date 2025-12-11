@@ -360,7 +360,7 @@ export class AIChatView extends ItemView {
     });
 
     // Handle @ mentions
-    this.inputTextarea.addEventListener("input", (e: Event) => {
+    this.inputTextarea.addEventListener("input", (_e: Event) => {
       const value = this.inputTextarea.value;
       const cursorPos = this.inputTextarea.selectionStart;
       const textBeforeCursor = value.substring(0, cursorPos);
@@ -500,7 +500,7 @@ export class AIChatView extends ItemView {
     const logoContainer = welcomeDiv.createDiv({ cls: "ai-assistant-welcome-logo" });
     setIcon(logoContainer, "bot");
 
-    welcomeDiv.createEl("h2", { text: "How can I help you today?" });
+    welcomeDiv.createEl("h2", { text: "AI assistant" });
     welcomeDiv.createEl("p", {
       text: "I can help you write, edit, and analyze your notes. Try one of these:",
       cls: "ai-assistant-welcome-subtitle",

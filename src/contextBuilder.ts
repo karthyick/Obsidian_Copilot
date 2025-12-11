@@ -1644,8 +1644,8 @@ Current Note Context:
    */
   public convertToLLMMessages(
     chatHistory: ChatMessage[],
-    currentMessage: string,
-    includeContext: boolean
+    _currentMessage: string,
+    _includeContext: boolean
   ): LLMMessage[] {
     const messages: LLMMessage[] = [];
 
