@@ -3,7 +3,6 @@ import {
   Editor,
   MarkdownView,
   TFile,
-  TFolder,
   parseYaml,
 } from "obsidian";
 import { NoteContext, EditorPosition, EditorRange } from "./types";

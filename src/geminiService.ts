@@ -1,4 +1,4 @@
-import { requestUrl, RequestUrlParam } from "obsidian";
+import { requestUrl } from "obsidian";
 import {
   AIAssistantSettings,
   LLMMessage,

@@ -1,10 +1,8 @@
-import { App, PluginSettingTab, Setting, Notice, DropdownComponent, setIcon, FuzzySuggestModal, TFile } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, DropdownComponent, setIcon, FuzzySuggestModal, TFile, ButtonComponent } from "obsidian";
 import type AIAssistantPlugin from "./main";
 import {
   AIAssistantSettings,
   AIProvider,
-  BEDROCK_MODELS,
-  AWS_REGIONS,
   PROVIDER_NAMES,
 } from "./types";
 import { ModelFetcher, ModelInfo } from "./modelFetcher";
@@ -63,7 +61,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Add glassmorphism class to settings container
     containerEl.addClass("ai-assistant-settings");
 
-    containerEl.createEl("h1", { text: "AI Assistant Settings" });
+    new Setting(containerEl).setName("AI Assistant settings").setHeading();
 
     // Provider Selection Section
     this.renderProviderSection(containerEl);
@@ -87,10 +85,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render provider selection section
    */
   private renderProviderSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", { text: "AI Provider" });
+    new Setting(containerEl).setName("AI provider").setHeading();
 
     new Setting(containerEl)
-      .setName("Active Provider")
+      .setName("Active provider")
       .setDesc("Select which AI provider to use")
       .addDropdown((dropdown) => {
         for (const [value, label] of Object.entries(PROVIDER_NAMES)) {
@@ -155,7 +153,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    section.createEl("h2", { text: "AWS Bedrock (Claude)" });
+    new Setting(section).setName("AWS Bedrock (Claude)").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
@@ -165,7 +163,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     }
 
     new Setting(section)
-      .setName("AWS Access Key ID")
+      .setName("AWS access key ID")
       .setDesc("Your AWS access key ID")
       .addText((text) =>
         text
@@ -178,7 +176,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
 
     new Setting(section)
-      .setName("AWS Secret Access Key")
+      .setName("AWS secret access key")
       .setDesc("Your AWS secret access key")
       .addText((text) => {
         text
@@ -193,7 +191,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       });
 
     new Setting(section)
-      .setName("AWS Session Token (Optional)")
+      .setName("AWS session token (optional)")
       .setDesc("Session token for temporary credentials")
       .addText((text) => {
         text
@@ -208,7 +206,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       });
 
     new Setting(section)
-      .setName("AWS Region")
+      .setName("AWS region")
       .setDesc("AWS region where Bedrock is enabled (e.g., us-east-1, us-west-2, ap-south-1)")
       .addText((text) =>
         text
@@ -249,7 +247,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Custom model ID textbox (shown when "Other" is selected)
     if (this.plugin.settings.bedrockModelId === "other") {
       new Setting(section)
-        .setName("Custom Model ID")
+        .setName("Custom model ID")
         .setDesc("Enter the full Bedrock model ID (e.g., anthropic.claude-3-opus-20240229-v1:0)")
         .addText((text) =>
           text
@@ -264,11 +262,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Test Connection Button
     new Setting(section)
-      .setName("Test Connection")
+      .setName("Test connection")
       .setDesc("Verify your AWS credentials and model access")
       .addButton((button) =>
         button
-          .setButtonText("Test Connection")
+          .setButtonText("Test connection")
           .setCta()
           .onClick(async () => {
             await this.testProviderConnection("bedrock", button);
@@ -286,7 +284,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    section.createEl("h2", { text: "Google Gemini" });
+    new Setting(section).setName("Google Gemini").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
@@ -296,7 +294,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     }
 
     new Setting(section)
-      .setName("Gemini API Key")
+      .setName("Gemini API key")
       .setDesc("Your Google AI Studio API key")
       .addText((text) => {
         text
@@ -306,7 +304,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             this.plugin.settings.geminiApiKey = value;
             await this.plugin.saveSettings();
             // Refresh models when API key changes
-            this.refreshGeminiModels();
+            void this.refreshGeminiModels();
           });
         text.inputEl.type = "password";
         return text;
@@ -340,7 +338,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Custom model ID textbox (shown when "Other" is selected)
     if (this.plugin.settings.geminiModelId === "other") {
       new Setting(section)
-        .setName("Custom Model ID")
+        .setName("Custom model ID")
         .setDesc("Enter the Gemini model ID (e.g., gemini-1.5-pro-latest)")
         .addText((text) =>
           text
@@ -355,11 +353,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Test Connection Button
     new Setting(section)
-      .setName("Test Connection")
+      .setName("Test connection")
       .setDesc("Verify your Gemini API key")
       .addButton((button) =>
         button
-          .setButtonText("Test Connection")
+          .setButtonText("Test connection")
           .setCta()
           .onClick(async () => {
             await this.testProviderConnection("gemini", button);
@@ -376,7 +374,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Auto-fetch models if API key is set
     if (this.plugin.settings.geminiApiKey && this.geminiModels.length === 0) {
-      this.refreshGeminiModels();
+      void this.refreshGeminiModels();
     }
   }
 
@@ -469,7 +467,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       cls: `ai-assistant-provider-section ${isActive ? "active" : "inactive"}`,
     });
 
-    section.createEl("h2", { text: "Groq" });
+    new Setting(section).setName("Groq").setHeading();
 
     if (!isActive) {
       section.createEl("p", {
@@ -479,7 +477,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     }
 
     new Setting(section)
-      .setName("Groq API Key")
+      .setName("Groq API key")
       .setDesc("Your Groq API key")
       .addText((text) => {
         text
@@ -489,7 +487,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             this.plugin.settings.groqApiKey = value;
             await this.plugin.saveSettings();
             // Refresh models when API key changes
-            this.refreshGroqModels();
+            void this.refreshGroqModels();
           });
         text.inputEl.type = "password";
         return text;
@@ -523,7 +521,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     // Custom model ID textbox (shown when "Other" is selected)
     if (this.plugin.settings.groqModelId === "other") {
       new Setting(section)
-        .setName("Custom Model ID")
+        .setName("Custom model ID")
         .setDesc("Enter the Groq model ID (e.g., llama-3.2-90b-text-preview)")
         .addText((text) =>
           text
@@ -538,11 +536,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Test Connection Button
     new Setting(section)
-      .setName("Test Connection")
+      .setName("Test connection")
       .setDesc("Verify your Groq API key")
       .addButton((button) =>
         button
-          .setButtonText("Test Connection")
+          .setButtonText("Test connection")
           .setCta()
           .onClick(async () => {
             await this.testProviderConnection("groq", button);
@@ -559,7 +557,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Auto-fetch models if API key is set
     if (this.plugin.settings.groqApiKey && this.groqModels.length === 0) {
-      this.refreshGroqModels();
+      void this.refreshGroqModels();
     }
   }
 
@@ -610,7 +608,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    */
   private async testProviderConnection(
     provider: AIProvider,
-    button: any
+    button: ButtonComponent
   ): Promise<void> {
     button.setDisabled(true);
     button.setButtonText("Testing...");
@@ -628,7 +626,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
     } finally {
       button.setDisabled(false);
-      button.setButtonText("Test Connection");
+      button.setButtonText("Test connection");
     }
   }
 
@@ -636,10 +634,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render common settings
    */
   private renderCommonSettings(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", { text: "Generation Settings" });
+    new Setting(containerEl).setName("Generation settings").setHeading();
 
     new Setting(containerEl)
-      .setName("Max Tokens")
+      .setName("Max tokens")
       .setDesc("Maximum number of tokens in the response (256-4096)")
       .addSlider((slider) =>
         slider
@@ -666,10 +664,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           })
       );
 
-    containerEl.createEl("h2", { text: "Behavior" });
+    new Setting(containerEl).setName("Behavior").setHeading();
 
     new Setting(containerEl)
-      .setName("Auto-include Note Context")
+      .setName("Auto-include note context")
       .setDesc("Automatically include the active note content in AI requests")
       .addToggle((toggle) =>
         toggle
@@ -681,7 +679,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Stream Responses")
+      .setName("Stream responses")
       .setDesc("Show AI responses in real-time as they are generated")
       .addToggle((toggle) =>
         toggle
@@ -700,7 +698,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render excluded notes section
    */
   private renderExcludedNotesSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", { text: "Excluded Notes" });
+    new Setting(containerEl).setName("Excluded notes").setHeading();
     containerEl.createEl("p", {
       text: "Notes listed here will never be included in AI context, even when referenced. Use this to protect sensitive information.",
       cls: "setting-item-description",
@@ -708,11 +706,11 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // Add note button with search
     new Setting(containerEl)
-      .setName("Add Excluded Note")
+      .setName("Add excluded note")
       .setDesc("Search and add a note to the exclusion list")
       .addButton((button) =>
         button
-          .setButtonText("Add Note")
+          .setButtonText("Add note")
           .setIcon("file-plus")
           .onClick(() => {
             // Open note suggester
@@ -775,14 +773,14 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render system prompt section
    */
   private renderSystemPromptSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", { text: "System Prompt" });
+    new Setting(containerEl).setName("System prompt").setHeading();
     containerEl.createEl("p", {
       text: "Customize the AI's behavior and capabilities. Leave empty to use the default prompt.",
       cls: "setting-item-description",
     });
 
     new Setting(containerEl)
-      .setName("Custom System Prompt")
+      .setName("Custom system prompt")
       .setDesc("Override the default system prompt (optional)")
       .addTextArea((text) => {
         text
@@ -794,13 +792,12 @@ export class AIAssistantSettingTab extends PluginSettingTab {
           });
         text.inputEl.rows = 10;
         text.inputEl.cols = 50;
-        text.inputEl.style.width = "100%";
-        text.inputEl.style.minHeight = "200px";
+        text.inputEl.addClass("ai-assistant-system-prompt-textarea");
         return text;
       });
 
     new Setting(containerEl)
-      .setName("Reset System Prompt")
+      .setName("Reset system prompt")
       .setDesc("Reset to the default system prompt")
       .addButton((button) =>
         button
@@ -819,7 +816,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Render info section
    */
   private renderInfoSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h2", { text: "Information" });
+    new Setting(containerEl).setName("Information").setHeading();
 
     const infoDiv = containerEl.createDiv({ cls: "ai-assistant-info" });
     infoDiv.createEl("p", {

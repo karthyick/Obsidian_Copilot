@@ -2779,3 +2779,14 @@
 .theme-light .ai-assistant-info p {
   color: var(--text-muted);
 }
+
+/* System prompt textarea */
+.ai-assistant-system-prompt-textarea {
+  width: 100%;
+  min-height: 200px;
+}
+
+/* Input height for chat */
+.ai-assistant-input-height-auto {
+  height: auto;
+}

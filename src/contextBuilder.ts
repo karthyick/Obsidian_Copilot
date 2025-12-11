@@ -1,5 +1,5 @@
 import { NoteController } from "./noteController";
-import { NoteContext, ChatMessage, LLMMessage } from "./types";
+import { ChatMessage, LLMMessage } from "./types";
 import { EditProtocol } from "./editProtocol";
 
 /**

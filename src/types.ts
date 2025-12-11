@@ -1,5 +1,3 @@
-import { TFile } from "obsidian";
-
 /**
  * Supported AI providers
  */

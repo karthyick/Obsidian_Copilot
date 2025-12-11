@@ -12,7 +12,6 @@ import type AIAssistantPlugin from "./main";
 import {
   ChatMessage,
   VIEW_TYPE_AI_ASSISTANT,
-  LLMMessage,
   BEDROCK_MODELS,
   PROVIDER_NAMES,
   AIProvider,

@@ -23,8 +23,6 @@ export default class AIAssistantPlugin extends Plugin {
   private chatView: AIChatView | null = null;
 
   async onload(): Promise<void> {
-    console.log("Loading AI Assistant plugin");
-
     // Load settings
     await this.loadSettings();
 
@@ -36,15 +34,16 @@ export default class AIAssistantPlugin extends Plugin {
       () => this.settings.excludedNotes
     );
 
-    // Register view
+    // Register view - create view directly without assigning to plugin property
     this.registerView(VIEW_TYPE_AI_ASSISTANT, (leaf) => {
-      this.chatView = new AIChatView(leaf, this);
-      return this.chatView;
+      const view = new AIChatView(leaf, this);
+      this.chatView = view;
+      return view;
     });
 
     // Add ribbon icon
     this.addRibbonIcon("bot", "AI Assistant", () => {
-      this.activateView();
+      void this.activateView();
     });
 
     // Register commands
@@ -57,11 +56,9 @@ export default class AIAssistantPlugin extends Plugin {
     this.checkSettings();
   }
 
-  async onunload(): Promise<void> {
-    console.log("Unloading AI Assistant plugin");
-
-    // Detach all leaves of our view type
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_ASSISTANT);
+  onunload(): void {
+    // Clean up - don't detach leaves to preserve user's layout
+    this.chatView = null;
   }
 
   /**
@@ -73,7 +70,7 @@ export default class AIAssistantPlugin extends Plugin {
       id: "open-ai-chat",
       name: "Open AI Assistant",
       callback: () => {
-        this.activateView();
+        void this.activateView();
       },
     });
 
