@@ -1722,7 +1722,7 @@ Current Note Context:
   /**
    * Check if note context is available
    */
-  public async hasNoteContext(): Promise<boolean> {
+  public hasNoteContext(): boolean {
     return this.noteController.hasActiveNote();
   }
 

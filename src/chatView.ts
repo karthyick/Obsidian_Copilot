@@ -156,11 +156,13 @@ export class AIChatView extends ItemView {
       }
     }
 
-    this.providerSelector.addEventListener("change", async () => {
-      this.plugin.settings.provider = this.providerSelector.value as AIProvider;
-      await this.plugin.saveSettings();
-      this.plugin.reinitializeLLMService();
-      this.updateModelSelector();
+    this.providerSelector.addEventListener("change", () => {
+      void (async () => {
+        this.plugin.settings.provider = this.providerSelector.value as AIProvider;
+        await this.plugin.saveSettings();
+        this.plugin.reinitializeLLMService();
+        await this.updateModelSelector();
+      })();
     });
 
     // Model selector
@@ -169,9 +171,9 @@ export class AIChatView extends ItemView {
     this.modelSelector = modelGroup.createEl("select", {
       cls: "ai-assistant-model-select",
     });
-    this.updateModelSelector();
+    void this.updateModelSelector();
 
-    this.modelSelector.addEventListener("change", async () => {
+    this.modelSelector.addEventListener("change", () => {
       const provider = this.plugin.settings.provider;
       if (provider === "bedrock") {
         this.plugin.settings.bedrockModelId = this.modelSelector.value;
@@ -180,7 +182,7 @@ export class AIChatView extends ItemView {
       } else if (provider === "groq") {
         this.plugin.settings.groqModelId = this.modelSelector.value;
       }
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     });
 
     // Right side - Actions
@@ -313,10 +315,11 @@ export class AIChatView extends ItemView {
     this.activeNoteDisplay = activeNoteRow.createDiv({ cls: "ai-assistant-active-note-display" });
     this.updateActiveNoteDisplay();
 
-    this.contextToggle.addEventListener("change", async () => {
+    this.contextToggle.addEventListener("change", () => {
       this.plugin.settings.autoIncludeContext = this.contextToggle.checked;
-      await this.plugin.saveSettings();
-      this.updateActiveNoteDisplay();
+      void this.plugin.saveSettings().then(() => {
+        this.updateActiveNoteDisplay();
+      });
     });
 
     // Referenced notes section
@@ -1001,11 +1004,12 @@ export class AIChatView extends ItemView {
         attr: { "aria-label": "Copy message" },
       });
       setIcon(copyBtn, "copy");
-      copyBtn.addEventListener("click", async () => {
-        await navigator.clipboard.writeText(message.content);
-        setIcon(copyBtn, "check");
-        new Notice("Copied to clipboard");
-        setTimeout(() => setIcon(copyBtn, "copy"), 2000);
+      copyBtn.addEventListener("click", () => {
+        void navigator.clipboard.writeText(message.content).then(() => {
+          setIcon(copyBtn, "check");
+          new Notice("Copied to clipboard");
+          setTimeout(() => setIcon(copyBtn, "copy"), 2000);
+        });
       });
     }
 
@@ -1041,11 +1045,12 @@ export class AIChatView extends ItemView {
       });
       setIcon(copyBtn, "copy");
 
-      copyBtn.addEventListener("click", async () => {
+      copyBtn.addEventListener("click", () => {
         const code = block.querySelector("code")?.textContent ?? "";
-        await navigator.clipboard.writeText(code);
-        setIcon(copyBtn, "check");
-        setTimeout(() => setIcon(copyBtn, "copy"), 2000);
+        void navigator.clipboard.writeText(code).then(() => {
+          setIcon(copyBtn, "check");
+          setTimeout(() => setIcon(copyBtn, "copy"), 2000);
+        });
       });
     });
   }
@@ -1068,10 +1073,11 @@ export class AIChatView extends ItemView {
       attr: { "aria-label": "Copy" },
     });
     setIcon(copyBtn, "copy");
-    copyBtn.addEventListener("click", async () => {
+    copyBtn.addEventListener("click", () => {
       const displayText = this.editProtocol.getDisplayText(message.content);
-      await navigator.clipboard.writeText(displayText);
-      new Notice("Copied to clipboard");
+      void navigator.clipboard.writeText(displayText).then(() => {
+        new Notice("Copied to clipboard");
+      });
     });
 
     // Insert button
@@ -1102,22 +1108,22 @@ export class AIChatView extends ItemView {
         applyBtn.addClass("ai-assistant-action-applied");
       } else {
         setIcon(applyBtn, "edit");
-        applyBtn.addEventListener("click", async () => {
-          const results = await this.editProtocol.executeCommands(
+        applyBtn.addEventListener("click", () => {
+          void this.editProtocol.executeCommands(
             message.editCommands!
-          );
-
-          const allSuccess = results.every((r) => r.success);
-          if (allSuccess) {
-            message.applied = true;
-            setIcon(applyBtn, "check-circle");
-            applyBtn.disabled = true;
-            applyBtn.addClass("ai-assistant-action-applied");
-            new Notice("Edit applied successfully");
-          } else {
-            const failedResult = results.find((r) => !r.success);
-            new Notice(`Edit failed: ${failedResult?.message}`);
-          }
+          ).then((results) => {
+            const allSuccess = results.every((r) => r.success);
+            if (allSuccess) {
+              message.applied = true;
+              setIcon(applyBtn, "check-circle");
+              applyBtn.disabled = true;
+              applyBtn.addClass("ai-assistant-action-applied");
+              new Notice("Edit applied successfully");
+            } else {
+              const failedResult = results.find((r) => !r.success);
+              new Notice(`Edit failed: ${failedResult?.message}`);
+            }
+          });
         });
       }
     }
