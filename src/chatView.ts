@@ -88,7 +88,7 @@ export class AIChatView extends ItemView {
     return "bot";
   }
 
-  onOpen(): void {
+  async onOpen(): Promise<void> {
     const container = this.containerEl.children[1] as HTMLElement;
     container.empty();
     container.addClass("ai-assistant-container");
@@ -118,7 +118,7 @@ export class AIChatView extends ItemView {
     this.updateActiveNoteDisplay();
   }
 
-  onClose(): void {
+  async onClose(): Promise<void> {
     // Cleanup
   }
 

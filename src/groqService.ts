@@ -136,8 +136,9 @@ export class GroqService implements ILLMService {
     };
 
     try {
-      // Obsidian's requestUrl doesn't support streaming responses,
-      // so we use fetch for SSE streaming which requires ReadableStream
+      // Note: We use fetch here because Obsidian's requestUrl doesn't support
+      // streaming responses with ReadableStream, which is required for SSE.
+      // For non-streaming requests, we use requestUrl (see sendMessage method).
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: "POST",
         headers: {

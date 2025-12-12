@@ -640,7 +640,7 @@ Keep node labels simple. Use only alphanumeric characters, spaces, hyphens, unde
 | { } | Braces | Reserved for node shapes |
 | : | Colon | Reserved for subgraphs |
 | ; | Semicolon | Statement terminator |
-| \| | Pipe | Reserved for text containers |
+| Pipe | Pipe | Reserved for text containers |
 | < > | Angle brackets | HTML/reserved |
 | & | Ampersand | HTML entity issues |
 | @ | At symbol | Can cause issues |
