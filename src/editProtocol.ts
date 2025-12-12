@@ -176,11 +176,13 @@ export class EditProtocol {
         case "insert_after_heading":
           return this.executeInsertAfterHeading(params);
 
-        default:
+        default: {
+          const unknownAction: never = action;
           return {
             success: false,
-            message: `Unknown action: ${action}`,
+            message: `Unknown action: ${String(unknownAction)}`,
           };
+        }
       }
     } catch (error) {
       return {
@@ -489,8 +491,10 @@ export class EditProtocol {
       case "insert_after_heading":
         return `Insert after "${params.heading}": "${this.truncate(params.text ?? params.content ?? "")}"`;
 
-      default:
-        return `Unknown action: ${action}`;
+      default: {
+        const unknownAction: never = action;
+        return `Unknown action: ${String(unknownAction)}`;
+      }
     }
   }
 

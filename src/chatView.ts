@@ -116,10 +116,14 @@ export class AIChatView extends ItemView {
 
     // Initial update
     this.updateActiveNoteDisplay();
+
+    // Await to satisfy async requirement from base class
+    await Promise.resolve();
   }
 
   async onClose(): Promise<void> {
-    // Cleanup
+    // Cleanup - await to satisfy async requirement from base class
+    await Promise.resolve();
   }
 
   /**
