@@ -205,7 +205,7 @@ export default class AIAssistantPlugin extends Plugin {
 
     // Reveal and focus the leaf
     if (leaf) {
-      workspace.revealLeaf(leaf);
+      void workspace.revealLeaf(leaf);
       // Focus the input
       const chatView = this.getChatView();
       if (chatView) {

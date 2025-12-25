@@ -986,7 +986,7 @@ export class AIChatView extends ItemView {
     });
 
     if (message.content) {
-      this.updateMessageContent(contentEl, message.content);
+      void this.updateMessageContent(contentEl, message.content);
     } else if (isStreaming) {
       const typingIndicator = contentEl.createDiv({ cls: "ai-assistant-typing-modern" });
       typingIndicator.createSpan({ cls: "ai-assistant-typing-dot" });
