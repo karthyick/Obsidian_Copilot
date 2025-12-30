@@ -4,6 +4,35 @@
 export type AIProvider = "bedrock" | "gemini" | "groq";
 
 /**
+ * HTML Export Style Configuration
+ */
+export interface HTMLExportStyles {
+  // Font settings
+  fontFamily: string;
+  fontSize: string;
+  lineHeight: string;
+
+  // Color settings
+  textColor: string;
+  headingColor: string;
+  linkColor: string;
+  codeBackground: string;
+  codeTextColor: string;
+  blockquoteBorderColor: string;
+  blockquoteTextColor: string;
+  tableBorderColor: string;
+  tableHeaderBackground: string;
+
+  // Spacing
+  maxWidth: string;
+  paragraphSpacing: string;
+  headingSpacing: string;
+
+  // Dark mode
+  useDarkMode: boolean;
+}
+
+/**
  * Plugin settings interface
  */
 export interface AIAssistantSettings {
@@ -37,7 +66,39 @@ export interface AIAssistantSettings {
 
   // Excluded notes (paths that should never be included in context)
   excludedNotes: string[];
+
+  // HTML Export settings
+  htmlExportStyles: HTMLExportStyles;
 }
+
+/**
+ * Default HTML Export Styles
+ */
+export const DEFAULT_HTML_EXPORT_STYLES: HTMLExportStyles = {
+  // Font settings
+  fontFamily: "'Segoe UI', Arial, sans-serif",
+  fontSize: "11pt",
+  lineHeight: "1.6",
+
+  // Color settings (light mode defaults)
+  textColor: "#24292e",
+  headingColor: "#1f2328",
+  linkColor: "#0969da",
+  codeBackground: "#f6f8fa",
+  codeTextColor: "#24292e",
+  blockquoteBorderColor: "#d0d7de",
+  blockquoteTextColor: "#656d76",
+  tableBorderColor: "#d0d7de",
+  tableHeaderBackground: "#f6f8fa",
+
+  // Spacing
+  maxWidth: "800px",
+  paragraphSpacing: "16px",
+  headingSpacing: "24px",
+
+  // Dark mode
+  useDarkMode: false,
+};
 
 /**
  * Default plugin settings
@@ -72,6 +133,9 @@ export const DEFAULT_SETTINGS: AIAssistantSettings = {
 
   // Excluded notes
   excludedNotes: [],
+
+  // HTML Export styles
+  htmlExportStyles: DEFAULT_HTML_EXPORT_STYLES,
 };
 
 /**

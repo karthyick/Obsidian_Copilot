@@ -4,6 +4,7 @@ import {
   AIAssistantSettings,
   AIProvider,
   PROVIDER_NAMES,
+  DEFAULT_HTML_EXPORT_STYLES,
 } from "./types";
 import { ModelFetcher, ModelInfo } from "./modelFetcher";
 
@@ -85,6 +86,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
 
     // System Prompt Section
     this.renderSystemPromptSection(containerEl);
+
+    // HTML Export Section
+    this.renderHtmlExportSection(containerEl);
 
     // Info Section
     this.renderInfoSection(containerEl);
@@ -817,6 +821,121 @@ export class AIAssistantSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
             this.display();
             new Notice("System prompt reset to default");
+          }))
+      );
+  }
+
+  /**
+   * Render HTML export settings section
+   */
+  private renderHtmlExportSection(containerEl: HTMLElement): void {
+    new Setting(containerEl).setName("Export").setHeading();
+    containerEl.createEl("p", {
+      text: "Customize the appearance of exported files",
+      cls: "setting-item-description",
+    });
+
+    // Ensure htmlExportStyles exists (for migration from older settings)
+    if (!this.plugin.settings.htmlExportStyles) {
+      this.plugin.settings.htmlExportStyles = { ...DEFAULT_HTML_EXPORT_STYLES };
+    }
+
+    // Dark mode toggle
+    new Setting(containerEl)
+      .setName("Export dark mode")
+      .setDesc("Use dark color scheme for exported files")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.htmlExportStyles.useDarkMode)
+          .onChange(this.wrapVoid(async (value) => {
+            this.plugin.settings.htmlExportStyles.useDarkMode = value;
+            await this.plugin.saveSettings();
+          }))
+      );
+
+    // Font family
+    new Setting(containerEl)
+      .setName("Export font")
+      .setDesc("Font family for exported documents")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.htmlExportStyles.fontFamily)
+          .onChange(this.wrapVoid(async (value) => {
+            this.plugin.settings.htmlExportStyles.fontFamily = value || DEFAULT_HTML_EXPORT_STYLES.fontFamily;
+            await this.plugin.saveSettings();
+          }))
+      );
+
+    // Font size
+    new Setting(containerEl)
+      .setName("Font size")
+      .setDesc("Base font size (e.g., 11pt, 14px, 1rem)")
+      .addText((text) =>
+        text
+          .setPlaceholder("11pt")
+          .setValue(this.plugin.settings.htmlExportStyles.fontSize)
+          .onChange(this.wrapVoid(async (value) => {
+            this.plugin.settings.htmlExportStyles.fontSize = value || DEFAULT_HTML_EXPORT_STYLES.fontSize;
+            await this.plugin.saveSettings();
+          }))
+      );
+
+    // Max width
+    new Setting(containerEl)
+      .setName("Max content width")
+      .setDesc("Maximum width of the content area (e.g., 800px, 60rem)")
+      .addText((text) =>
+        text
+          .setPlaceholder("800px")
+          .setValue(this.plugin.settings.htmlExportStyles.maxWidth)
+          .onChange(this.wrapVoid(async (value) => {
+            this.plugin.settings.htmlExportStyles.maxWidth = value || DEFAULT_HTML_EXPORT_STYLES.maxWidth;
+            await this.plugin.saveSettings();
+          }))
+      );
+
+    // Link color
+    new Setting(containerEl)
+      .setName("Link color")
+      .setDesc("Color for hyperlinks (hex format, e.g., #0969da)")
+      .addText((text) =>
+        text
+          .setPlaceholder("#0969da")
+          .setValue(this.plugin.settings.htmlExportStyles.linkColor)
+          .onChange(this.wrapVoid(async (value) => {
+            this.plugin.settings.htmlExportStyles.linkColor = value || DEFAULT_HTML_EXPORT_STYLES.linkColor;
+            await this.plugin.saveSettings();
+          }))
+      );
+
+    // Code background
+    new Setting(containerEl)
+      .setName("Code block background")
+      .setDesc("Background color for code blocks (hex format)")
+      .addText((text) =>
+        text
+          .setPlaceholder("#f6f8fa")
+          .setValue(this.plugin.settings.htmlExportStyles.codeBackground)
+          .onChange(this.wrapVoid(async (value) => {
+            this.plugin.settings.htmlExportStyles.codeBackground = value || DEFAULT_HTML_EXPORT_STYLES.codeBackground;
+            await this.plugin.saveSettings();
+          }))
+      );
+
+    // Reset to defaults button
+    new Setting(containerEl)
+      .setName("Reset styles")
+      .setDesc("Reset all export styles to default values")
+      .addButton((button) =>
+        button
+          .setButtonText("Reset")
+          .setWarning()
+          .onClick(this.wrapVoid0(async () => {
+            this.plugin.settings.htmlExportStyles = { ...DEFAULT_HTML_EXPORT_STYLES };
+            await this.plugin.saveSettings();
+            this.display();
+            new Notice("Export styles reset to default");
           }))
       );
   }

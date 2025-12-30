@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, Notice } from "obsidian";
+import { Plugin, WorkspaceLeaf, Notice, TFile } from "obsidian";
 import {
   AIAssistantSettings,
   DEFAULT_SETTINGS,
@@ -11,6 +11,10 @@ import { LLMServiceManager } from "./llmServiceManager";
 import { NoteController } from "./noteController";
 import { ContextBuilder } from "./contextBuilder";
 import { AIChatView } from "./chatView";
+import { ClipboardExporter } from "./exporters/clipboardExporter";
+import { HTMLExporter } from "./exporters/htmlExporter";
+import { DOCXExporter } from "./exporters/docxExporter";
+import { ExportModal } from "./ui/ExportModal";
 
 /**
  * Main plugin class for AI Assistant
@@ -176,6 +180,127 @@ export default class AIAssistantPlugin extends Plugin {
         if (chatView) {
           chatView.clearChat();
         }
+      },
+    });
+
+    // Export: Copy to Clipboard
+    this.addCommand({
+      id: "export-copy-to-clipboard",
+      name: "Copy to clipboard as rich text",
+      editorCallback: async () => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || !(activeFile instanceof TFile)) {
+          new Notice("No active file to export");
+          return;
+        }
+
+        if (activeFile.extension !== "md") {
+          new Notice("Only markdown files can be exported");
+          return;
+        }
+
+        try {
+          new Notice("Copying to clipboard...");
+          const markdown = await this.app.vault.read(activeFile);
+          const exporter = new ClipboardExporter();
+          await exporter.exportToClipboard(markdown);
+          new Notice("Copied to clipboard as rich text");
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          new Notice(`Export failed: ${errorMessage}`);
+          // Error already shown via Notice - no console logging in production
+        }
+      },
+    });
+
+    // Export: HTML File
+    this.addCommand({
+      id: "export-to-html",
+      name: "Export as web page",
+      editorCallback: async () => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || !(activeFile instanceof TFile)) {
+          new Notice("No active file to export");
+          return;
+        }
+
+        if (activeFile.extension !== "md") {
+          new Notice("Only markdown files can be exported");
+          return;
+        }
+
+        try {
+          new Notice("Exporting as web page");
+          const markdown = await this.app.vault.read(activeFile);
+          const exporter = new HTMLExporter(this.app, this.settings.htmlExportStyles);
+          await exporter.exportToHtml(markdown, activeFile.basename, {
+            title: activeFile.basename,
+          });
+          // Success notice is shown by HTMLExporter
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          new Notice(`Export failed: ${errorMessage}`);
+          // Error already shown via Notice - no console logging in production
+        }
+      },
+    });
+
+    // Export: DOCX File
+    this.addCommand({
+      id: "export-to-docx",
+      name: "Export as Word document",
+      editorCallback: async () => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || !(activeFile instanceof TFile)) {
+          new Notice("No active file to export");
+          return;
+        }
+
+        if (activeFile.extension !== "md") {
+          new Notice("Only markdown files can be exported");
+          return;
+        }
+
+        try {
+          new Notice("Exporting as Word document");
+          const markdown = await this.app.vault.read(activeFile);
+          const exporter = new DOCXExporter(this.app);
+          await exporter.exportToDocx(markdown, activeFile.basename, {
+            title: activeFile.basename,
+          });
+          // Success notice is shown by DOCXExporter
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          new Notice(`Export failed: ${errorMessage}`);
+          // Error already shown via Notice - no console logging in production
+        }
+      },
+    });
+
+    // Export: Open Export Modal
+    this.addCommand({
+      id: "export-document",
+      name: "Choose export format",
+      editorCallback: async () => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || !(activeFile instanceof TFile)) {
+          new Notice("No active file to export");
+          return;
+        }
+
+        if (activeFile.extension !== "md") {
+          new Notice("Only markdown files can be exported");
+          return;
+        }
+
+        const markdown = await this.app.vault.read(activeFile);
+        const modal = new ExportModal(
+          this.app,
+          markdown,
+          activeFile.basename,
+          this.settings.htmlExportStyles
+        );
+        modal.open();
       },
     });
   }
