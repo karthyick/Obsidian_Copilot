@@ -93,17 +93,31 @@ function runTest(name: string, testFn: () => void): TestResult {
 }
 
 /**
+ * Mock App interface for testing
+ */
+interface MockApp {
+  vault: {
+    getAbstractFileByPath: () => null;
+    createFolder: () => Promise<object>;
+    create: () => Promise<object>;
+  };
+  fileManager: {
+    trashFile: () => Promise<void>;
+  };
+}
+
+/**
  * Create a mock App object for testing
  */
-function createMockApp(): any {
+function createMockApp(): MockApp {
   return {
     vault: {
       getAbstractFileByPath: () => null,
-      createFolder: async () => {},
-      create: async () => {},
+      createFolder: () => Promise.resolve({}),
+      create: () => Promise.resolve({}),
     },
     fileManager: {
-      trashFile: async () => {},
+      trashFile: () => Promise.resolve(),
     },
   };
 }

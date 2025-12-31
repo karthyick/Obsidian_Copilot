@@ -109,7 +109,7 @@ export class HTMLExporter {
     const sanitizedFilename = this.sanitizeFilename(filename);
 
     // Process mermaid diagrams
-    const processedMarkdown = await this.handleMermaidDiagrams(markdown);
+    const processedMarkdown = this.handleMermaidDiagrams(markdown);
 
     // Parse markdown to AST
     const ast = this.parseMarkdown(processedMarkdown);
@@ -159,7 +159,7 @@ export class HTMLExporter {
     const normalizedPath = filePath.endsWith(".html") ? filePath : `${filePath}.html`;
 
     // Process mermaid diagrams
-    const processedMarkdown = await this.handleMermaidDiagrams(markdown);
+    const processedMarkdown = this.handleMermaidDiagrams(markdown);
 
     // Parse markdown to AST
     const ast = this.parseMarkdown(processedMarkdown);
@@ -228,7 +228,7 @@ export class HTMLExporter {
   /**
    * Handle Mermaid diagrams by converting them to kroki.io image URLs
    */
-  async handleMermaidDiagrams(content: string): Promise<string> {
+  handleMermaidDiagrams(content: string): string {
     if (!content || !this.mermaidHandler.hasMermaid(content)) {
       return content;
     }
@@ -576,7 +576,7 @@ export class HTMLExporter {
       }
 
       // Plain text
-      const nextSpecial = remaining.search(/[!\[*_`]/);
+      const nextSpecial = remaining.search(/[![*_`]/);
       if (nextSpecial === -1) {
         nodes.push({
           type: "text",

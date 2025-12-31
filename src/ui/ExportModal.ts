@@ -35,7 +35,7 @@ export class ExportModal extends Modal {
     this.htmlExportStyles = htmlExportStyles;
   }
 
-  onOpen(): Promise<void> {
+  onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("export-modal");
@@ -108,14 +108,11 @@ export class ExportModal extends Modal {
       cls: "mod-cta",
     });
     exportBtn.addEventListener("click", () => void this.executeExport());
-
-    return Promise.resolve();
   }
 
-  onClose(): Promise<void> {
+  onClose(): void {
     const { contentEl } = this;
     contentEl.empty();
-    return Promise.resolve();
   }
 
   /**

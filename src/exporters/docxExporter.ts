@@ -10,7 +10,7 @@
  * - Provides file save functionality via Obsidian vault or browser download
  */
 
-import { App, Notice } from "obsidian";
+import { App, Notice, requestUrl } from "obsidian";
 import {
   Document,
   Paragraph,
@@ -216,15 +216,14 @@ export class DOCXExporter {
     const encoded = this.encodeBase64Url(mermaidCode);
     const url = `https://kroki.io/mermaid/png/${encoded}`;
 
-    // Note: Using fetch is the standard way to make HTTP requests in Obsidian plugins
-    // as they run in an Electron browser environment that supports the Fetch API
-    const response = await fetch(url);
+    // Use Obsidian's requestUrl for network requests
+    const response = await requestUrl({ url });
 
-    if (!response.ok) {
+    if (response.status !== 200) {
       throw new Error(`Failed to fetch Mermaid PNG: ${response.status}`);
     }
 
-    const buffer = await response.arrayBuffer();
+    const buffer = response.arrayBuffer;
 
     // Default dimensions for Mermaid diagrams - will be scaled by docx
     const width = 600;
@@ -553,7 +552,7 @@ export class DOCXExporter {
       }
 
       // Plain text
-      const nextSpecial = remaining.search(/[!\[*_`]/);
+      const nextSpecial = remaining.search(/[![*_`]/);
       if (nextSpecial === -1) {
         nodes.push({
           type: "text",
@@ -779,7 +778,7 @@ export class DOCXExporter {
             })
           );
           break;
-        case "image":
+        case "image": {
           const imageRun = await this.createImageRun(node, mermaidImages);
           if (imageRun) {
             runs.push(imageRun);
@@ -787,6 +786,7 @@ export class DOCXExporter {
             runs.push(new TextRun({ text: `[Image: ${node.alt || "image"}]` }));
           }
           break;
+        }
         case "linebreak":
           runs.push(new TextRun({ break: 1 }));
           break;
@@ -847,14 +847,14 @@ export class DOCXExporter {
       }
     }
 
-    // For external images, try to fetch them
+    // For external images, try to fetch them using Obsidian's requestUrl
     const url = node.url || "";
     if (url && url.startsWith("http")) {
       try {
-        const response = await fetch(url);
-        if (response.ok) {
-          const buffer = await response.arrayBuffer();
-          const contentType = response.headers.get("content-type") || "";
+        const response = await requestUrl({ url });
+        if (response.status === 200) {
+          const buffer = response.arrayBuffer;
+          const contentType = response.headers["content-type"] || "";
           const type = contentType.includes("png")
             ? "png"
             : contentType.includes("gif")

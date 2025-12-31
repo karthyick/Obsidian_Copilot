@@ -66,7 +66,7 @@ export class ClipboardExporter {
     }
 
     // Process mermaid diagrams first
-    const processedMarkdown = await this.handleMermaidDiagrams(markdown);
+    const processedMarkdown = this.handleMermaidDiagrams(markdown);
 
     // Parse markdown to AST
     const ast = this.parseMarkdown(processedMarkdown);
@@ -86,7 +86,7 @@ export class ClipboardExporter {
    * @param content - The markdown content containing mermaid blocks
    * @returns Markdown with mermaid blocks replaced by image references
    */
-  async handleMermaidDiagrams(content: string): Promise<string> {
+  handleMermaidDiagrams(content: string): string {
     if (!content || !this.mermaidHandler.hasMermaid(content)) {
       return content;
     }
@@ -375,7 +375,7 @@ export class ClipboardExporter {
       }
 
       // Plain text - find next special character or end
-      const nextSpecial = remaining.search(/[!\[*_`]/);
+      const nextSpecial = remaining.search(/[![*_`]/);
       if (nextSpecial === -1) {
         // No more special characters
         nodes.push({
@@ -606,42 +606,17 @@ ${html}
     plainText: string
   ): Promise<void> {
     try {
-      // Try using the modern Clipboard API with HTML support
-      if (navigator.clipboard && typeof ClipboardItem !== "undefined") {
-        const htmlBlob = new Blob([html], { type: "text/html" });
-        const textBlob = new Blob([plainText], { type: "text/plain" });
-        const clipboardItem = new ClipboardItem({
-          "text/html": htmlBlob,
-          "text/plain": textBlob,
-        });
-        await navigator.clipboard.write([clipboardItem]);
-      } else {
-        // Fallback for environments without ClipboardItem support
-        // Use deprecated but widely supported execCommand
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = html;
-        tempDiv.addClass("clipboard-export-temp");
-        // Position off-screen for copy operation
-        tempDiv.setCssProps({
-          position: "fixed",
-          left: "-9999px",
-          top: "-9999px",
-        });
-        document.body.appendChild(tempDiv);
-
-        const range = document.createRange();
-        range.selectNodeContents(tempDiv);
-        const selection = window.getSelection();
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(range);
-          document.execCommand("copy");
-          selection.removeAllRanges();
-        }
-        document.body.removeChild(tempDiv);
-      }
+      // Use the modern Clipboard API with HTML support
+      // Obsidian runs in Electron which fully supports ClipboardItem
+      const htmlBlob = new Blob([html], { type: "text/html" });
+      const textBlob = new Blob([plainText], { type: "text/plain" });
+      const clipboardItem = new ClipboardItem({
+        "text/html": htmlBlob,
+        "text/plain": textBlob,
+      });
+      await navigator.clipboard.write([clipboardItem]);
     } catch {
-      // Final fallback - copy as plain text
+      // Fallback - copy as plain text if rich text copy fails
       await navigator.clipboard.writeText(plainText);
       throw new Error(
         "Could not copy rich text. Plain text was copied instead."

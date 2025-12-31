@@ -111,23 +111,43 @@ function runTest(name: string, testFn: () => void | Promise<void>): TestResult {
 }
 
 /**
+ * Mock App interface for testing
+ */
+interface MockApp {
+  vault: {
+    getAbstractFileByPath: () => null;
+    createFolder: () => Promise<object>;
+    create: () => Promise<object>;
+    createBinary: () => Promise<object>;
+    adapter: {
+      exists: () => Promise<boolean>;
+      mkdir: () => Promise<void>;
+      writeBinary: () => Promise<void>;
+    };
+  };
+  fileManager: {
+    trashFile: () => Promise<void>;
+  };
+}
+
+/**
  * Create a mock App object for testing
  */
-function createMockApp(): unknown {
+function createMockApp(): MockApp {
   return {
     vault: {
       getAbstractFileByPath: () => null,
-      createFolder: async () => ({}),
-      create: async () => ({}),
-      createBinary: async () => ({}),
+      createFolder: () => Promise.resolve({}),
+      create: () => Promise.resolve({}),
+      createBinary: () => Promise.resolve({}),
       adapter: {
-        exists: async () => false,
-        mkdir: async () => {},
-        writeBinary: async () => {},
+        exists: () => Promise.resolve(false),
+        mkdir: () => Promise.resolve(),
+        writeBinary: () => Promise.resolve(),
       },
     },
     fileManager: {
-      trashFile: async () => {},
+      trashFile: () => Promise.resolve(),
     },
   };
 }
@@ -846,7 +866,7 @@ console.log(greeting);
 /**
  * Run all test suites and return results
  */
-export async function runAllTests(): Promise<{ suites: TestSuite[]; summary: { total: number; passed: number; failed: number } }> {
+export function runAllTests(): { suites: TestSuite[]; summary: { total: number; passed: number; failed: number } } {
   const mockApp = createMockApp();
   // Use type assertion since we're mocking the App
   const exporter = new DOCXExporter(mockApp as never);
