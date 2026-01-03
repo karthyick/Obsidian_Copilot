@@ -1,4 +1,4 @@
-import { requestUrl } from "obsidian";
+import { requestUrl, Notice } from "obsidian";
 
 /**
  * Model info from API
@@ -30,7 +30,12 @@ export class ModelFetcher {
       });
 
       if (response.status !== 200) {
-        return [];
+        new Notice(
+          `Failed to fetch Gemini models (Status: ${response.status}). ` +
+          `Please verify your API key is valid. Using fallback model list.`,
+          8000
+        );
+        return this.getFallbackGeminiModels();
       }
 
       const data = response.json;
@@ -70,8 +75,14 @@ export class ModelFetcher {
       });
 
       return models;
-    } catch {
-      return [];
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      new Notice(
+        `Failed to fetch Gemini models: ${errorMessage}. ` +
+        `Please check your network connection and API key. Using fallback model list.`,
+        8000
+      );
+      return this.getFallbackGeminiModels();
     }
   }
 
@@ -93,7 +104,12 @@ export class ModelFetcher {
       });
 
       if (response.status !== 200) {
-        return [];
+        new Notice(
+          `Failed to fetch Groq models (Status: ${response.status}). ` +
+          `Please verify your API key is valid. Using fallback model list.`,
+          8000
+        );
+        return this.getFallbackGroqModels();
       }
 
       const data = response.json;
@@ -116,8 +132,14 @@ export class ModelFetcher {
       models.sort((a, b) => a.name.localeCompare(b.name));
 
       return models;
-    } catch {
-      return [];
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      new Notice(
+        `Failed to fetch Groq models: ${errorMessage}. ` +
+        `Please check your network connection and API key. Using fallback model list.`,
+        8000
+      );
+      return this.getFallbackGroqModels();
     }
   }
 
