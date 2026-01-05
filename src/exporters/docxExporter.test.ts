@@ -97,12 +97,11 @@ function assertInstanceOf(obj: unknown, constructor: { name: string }, message: 
 /**
  * Run a single test and capture result
  */
-function runTest(name: string, testFn: () => void | Promise<void>): TestResult {
+async function runTest(name: string, testFn: () => void | Promise<void>): Promise<TestResult> {
   try {
     const result = testFn();
     if (result instanceof Promise) {
-      // For async tests, we'll handle them synchronously for this test suite
-      return { name, passed: true };
+      await result; // Await the promise to ensure completion
     }
     return { name, passed: true };
   } catch (e) {
@@ -155,89 +154,89 @@ function createMockApp(): MockApp {
 /**
  * parseMarkdown Test Suite
  */
-function testParseMarkdown(exporter: DOCXExporter): TestSuite {
+async function testParseMarkdown(exporter: DOCXExporter): Promise<TestSuite> {
   const tests: TestResult[] = [];
 
   // Empty/null inputs
-  tests.push(runTest("empty string returns empty array", () => {
+  tests.push(await runTest("empty string returns empty array", () => {
     const result = exporter.parseMarkdown("");
     assertLength(result, 0, "Empty string");
   }));
 
-  tests.push(runTest("whitespace-only returns empty array", () => {
+  tests.push(await runTest("whitespace-only returns empty array", () => {
     const result = exporter.parseMarkdown("   \n   ");
     assertLength(result, 0, "Whitespace only");
   }));
 
   // Headings
-  tests.push(runTest("parses h1 heading", () => {
+  tests.push(await runTest("parses h1 heading", () => {
     const result = exporter.parseMarkdown("# Hello World");
     assertLength(result, 1, "H1 result count");
     assertEqual(result[0].type, "heading" as MarkdownNodeType, "H1 type");
     assertEqual(result[0].level, 1, "H1 level");
   }));
 
-  tests.push(runTest("parses h2 heading", () => {
+  tests.push(await runTest("parses h2 heading", () => {
     const result = exporter.parseMarkdown("## Subheading");
     assertEqual(result[0].type, "heading" as MarkdownNodeType, "H2 type");
     assertEqual(result[0].level, 2, "H2 level");
   }));
 
-  tests.push(runTest("parses h3 heading", () => {
+  tests.push(await runTest("parses h3 heading", () => {
     const result = exporter.parseMarkdown("### Third Level");
     assertEqual(result[0].level, 3, "H3 level");
-  }));
+    }));
 
-  tests.push(runTest("parses h4 heading", () => {
+  tests.push(await runTest("parses h4 heading", () => {
     const result = exporter.parseMarkdown("#### Fourth Level");
     assertEqual(result[0].level, 4, "H4 level");
   }));
 
-  tests.push(runTest("parses h5 heading", () => {
+  tests.push(await runTest("parses h5 heading", () => {
     const result = exporter.parseMarkdown("##### Fifth Level");
     assertEqual(result[0].level, 5, "H5 level");
   }));
 
-  tests.push(runTest("parses h6 heading", () => {
+  tests.push(await runTest("parses h6 heading", () => {
     const result = exporter.parseMarkdown("###### Deep Level");
     assertEqual(result[0].level, 6, "H6 level");
   }));
 
-  tests.push(runTest("# without space is not heading", () => {
+  tests.push(await runTest("# without space is not heading", () => {
     const result = exporter.parseMarkdown("#NoSpace");
     assertEqual(result[0].type, "paragraph" as MarkdownNodeType, "Not heading");
   }));
 
   // Paragraphs
-  tests.push(runTest("parses single paragraph", () => {
+  tests.push(await runTest("parses single paragraph", () => {
     const result = exporter.parseMarkdown("This is a paragraph.");
     assertLength(result, 1, "Single paragraph");
     assertEqual(result[0].type, "paragraph" as MarkdownNodeType, "Paragraph type");
   }));
 
-  tests.push(runTest("parses multiple paragraphs", () => {
+  tests.push(await runTest("parses multiple paragraphs", () => {
     const result = exporter.parseMarkdown("First.\n\nSecond.");
     assertLength(result, 2, "Two paragraphs");
   }));
 
   // Code blocks
-  tests.push(runTest("parses code block without language", () => {
+  tests.push(await runTest("parses code block without language", () => {
     const result = exporter.parseMarkdown("```\nconst x = 1;\n```");
     assertEqual(result[0].type, "codeblock" as MarkdownNodeType, "Codeblock type");
     assertEqual(result[0].content, "const x = 1;", "Codeblock content");
   }));
 
-  tests.push(runTest("parses code block with language", () => {
+  tests.push(await runTest("parses code block with language", () => {
     const result = exporter.parseMarkdown("```javascript\ncode\n```");
     assertEqual(result[0].language, "javascript", "Language");
   }));
 
-  tests.push(runTest("parses code block with typescript", () => {
+  tests.push(await runTest("parses code block with typescript", () => {
     const result = exporter.parseMarkdown("```typescript\ninterface User {}\n```");
     assertEqual(result[0].language, "typescript", "TypeScript language");
   }));
 
-  tests.push(runTest("parses multiline code block", () => {
+  tests.push(await runTest("parses multiline code block", () => {
     const result = exporter.parseMarkdown("```python\ndef hello():\n    print('hi')\n```");
     assertEqual(result[0].type, "codeblock" as MarkdownNodeType, "Codeblock type");
     assertContains(result[0].content || "", "def hello", "Contains function");
@@ -245,75 +244,75 @@ function testParseMarkdown(exporter: DOCXExporter): TestSuite {
   }));
 
   // Mermaid code blocks
-  tests.push(runTest("parses mermaid code block", () => {
+  tests.push(await runTest("parses mermaid code block", () => {
     const result = exporter.parseMarkdown("```mermaid\ngraph TD\n    A --> B\n```");
     assertEqual(result[0].type, "mermaid" as MarkdownNodeType, "Mermaid type");
     assertContains(result[0].content || "", "graph TD", "Contains mermaid diagram");
   }));
 
   // Lists
-  tests.push(runTest("parses ordered list", () => {
+  tests.push(await runTest("parses ordered list", () => {
     const result = exporter.parseMarkdown("1. First\n2. Second");
     assertEqual(result[0].type, "list" as MarkdownNodeType, "List type");
     assertEqual(result[0].ordered, true, "Ordered list");
     assertLength(result[0].children || [], 2, "List items");
   }));
 
-  tests.push(runTest("parses unordered list with dash", () => {
+  tests.push(await runTest("parses unordered list with dash", () => {
     const result = exporter.parseMarkdown("- Item one\n- Item two");
     assertEqual(result[0].ordered, false, "Unordered list");
   }));
 
-  tests.push(runTest("parses unordered list with asterisk", () => {
+  tests.push(await runTest("parses unordered list with asterisk", () => {
     const result = exporter.parseMarkdown("* Item");
     assertEqual(result[0].type, "list" as MarkdownNodeType, "List type");
     assertEqual(result[0].ordered, false, "Unordered");
   }));
 
-  tests.push(runTest("parses unordered list with plus", () => {
+  tests.push(await runTest("parses unordered list with plus", () => {
     const result = exporter.parseMarkdown("+ Item");
     assertEqual(result[0].ordered, false, "Unordered with plus");
   }));
 
-  tests.push(runTest("parses list with multiple items", () => {
+  tests.push(await runTest("parses list with multiple items", () => {
     const result = exporter.parseMarkdown("- A\n- B\n- C");
     assertLength(result[0].children || [], 3, "Three items");
   }));
 
   // Blockquotes
-  tests.push(runTest("parses blockquote", () => {
+  tests.push(await runTest("parses blockquote", () => {
     const result = exporter.parseMarkdown("> Quote text");
     assertEqual(result[0].type, "blockquote" as MarkdownNodeType, "Blockquote type");
   }));
 
-  tests.push(runTest("parses multiline blockquote", () => {
+  tests.push(await runTest("parses multiline blockquote", () => {
     const result = exporter.parseMarkdown("> Line 1\n> Line 2");
     assertEqual(result[0].type, "blockquote" as MarkdownNodeType, "Blockquote type");
   }));
 
   // Horizontal rules
-  tests.push(runTest("parses horizontal rule (dashes)", () => {
+  tests.push(await runTest("parses horizontal rule (dashes)", () => {
     const result = exporter.parseMarkdown("---");
     assertEqual(result[0].type, "horizontalrule" as MarkdownNodeType, "HR type");
   }));
 
-  tests.push(runTest("parses horizontal rule (asterisks)", () => {
+  tests.push(await runTest("parses horizontal rule (asterisks)", () => {
     const result = exporter.parseMarkdown("***");
     assertEqual(result[0].type, "horizontalrule" as MarkdownNodeType, "HR asterisks");
   }));
 
-  tests.push(runTest("parses horizontal rule (underscores)", () => {
+  tests.push(await runTest("parses horizontal rule (underscores)", () => {
     const result = exporter.parseMarkdown("___");
     assertEqual(result[0].type, "horizontalrule" as MarkdownNodeType, "HR underscores");
   }));
 
   // Tables
-  tests.push(runTest("parses simple table", () => {
+  tests.push(await runTest("parses simple table", () => {
     const result = exporter.parseMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
     assertEqual(result[0].type, "table" as MarkdownNodeType, "Table type");
   }));
 
-  tests.push(runTest("table has header row", () => {
+  tests.push(await runTest("table has header row", () => {
     const result = exporter.parseMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
     const table = result[0];
     assertTrue(table.children !== undefined && table.children.length >= 1, "Has rows");
@@ -322,14 +321,14 @@ function testParseMarkdown(exporter: DOCXExporter): TestSuite {
     assertTrue(headerRow.children?.[0].isHeader === true, "First cell is header");
   }));
 
-  tests.push(runTest("parses table with multiple data rows", () => {
+  tests.push(await runTest("parses table with multiple data rows", () => {
     const result = exporter.parseMarkdown("| H1 | H2 |\n|---|---|\n| A | B |\n| C | D |");
     const table = result[0];
     assertGreaterThanOrEqual(table.children?.length || 0, 3, "Has header + 2 data rows");
   }));
 
   // Complex document
-  tests.push(runTest("parses complex document", () => {
+  tests.push(await runTest("parses complex document", () => {
     const md = "# Title\n\nParagraph\n\n- List\n\n```js\ncode\n```\n\n> Quote\n\n---";
     const result = exporter.parseMarkdown(md);
     assertGreaterThan(result.length, 5, "Complex doc length");
@@ -347,92 +346,92 @@ function testParseMarkdown(exporter: DOCXExporter): TestSuite {
 /**
  * parseInline Test Suite
  */
-function testParseInline(exporter: DOCXExporter): TestSuite {
+async function testParseInline(exporter: DOCXExporter): Promise<TestSuite> {
   const tests: TestResult[] = [];
 
   // Empty inputs
-  tests.push(runTest("empty string returns empty array", () => {
+  tests.push(await runTest("empty string returns empty array", () => {
     assertLength(exporter.parseInline(""), 0, "Empty inline");
   }));
 
   // Bold
-  tests.push(runTest("parses bold with asterisks", () => {
+  tests.push(await runTest("parses bold with asterisks", () => {
     const result = exporter.parseInline("**bold**");
     assertEqual(result[0].type, "bold" as MarkdownNodeType, "Bold type");
   }));
 
-  tests.push(runTest("parses bold with underscores", () => {
+  tests.push(await runTest("parses bold with underscores", () => {
     const result = exporter.parseInline("__bold__");
     assertEqual(result[0].type, "bold" as MarkdownNodeType, "Bold underscores");
   }));
 
   // Italic
-  tests.push(runTest("parses italic with asterisk", () => {
+  tests.push(await runTest("parses italic with asterisk", () => {
     const result = exporter.parseInline("*italic*");
     assertEqual(result[0].type, "italic" as MarkdownNodeType, "Italic type");
   }));
 
-  tests.push(runTest("parses italic with underscore", () => {
+  tests.push(await runTest("parses italic with underscore", () => {
     const result = exporter.parseInline("_italic_");
     assertEqual(result[0].type, "italic" as MarkdownNodeType, "Italic underscore");
   }));
 
   // Code
-  tests.push(runTest("parses inline code", () => {
+  tests.push(await runTest("parses inline code", () => {
     const result = exporter.parseInline("`code`");
     assertEqual(result[0].type, "code" as MarkdownNodeType, "Code type");
     assertEqual(result[0].content, "code", "Code content");
   }));
 
-  tests.push(runTest("parses inline code with special chars", () => {
+  tests.push(await runTest("parses inline code with special chars", () => {
     const result = exporter.parseInline("`const x = 1;`");
     assertEqual(result[0].type, "code" as MarkdownNodeType, "Code type");
     assertContains(result[0].content || "", "const", "Has const");
   }));
 
   // Links
-  tests.push(runTest("parses link", () => {
+  tests.push(await runTest("parses link", () => {
     const result = exporter.parseInline("[text](https://example.com)");
     assertEqual(result[0].type, "link" as MarkdownNodeType, "Link type");
     assertEqual(result[0].content, "text", "Link text");
     assertEqual(result[0].url, "https://example.com", "Link URL");
   }));
 
-  tests.push(runTest("parses link with path", () => {
+  tests.push(await runTest("parses link with path", () => {
     const result = exporter.parseInline("[docs](/path/to/docs)");
     assertEqual(result[0].type, "link" as MarkdownNodeType, "Link type");
     assertEqual(result[0].url, "/path/to/docs", "Link path");
   }));
 
   // Images
-  tests.push(runTest("parses image", () => {
+  tests.push(await runTest("parses image", () => {
     const result = exporter.parseInline("![alt](image.png)");
     assertEqual(result[0].type, "image" as MarkdownNodeType, "Image type");
     assertEqual(result[0].alt, "alt", "Image alt");
     assertEqual(result[0].url, "image.png", "Image URL");
   }));
 
-  tests.push(runTest("parses image with http url", () => {
+  tests.push(await runTest("parses image with http url", () => {
     const result = exporter.parseInline("![logo](https://example.com/logo.png)");
     assertEqual(result[0].type, "image" as MarkdownNodeType, "Image type");
     assertContains(result[0].url || "", "https://", "Has https");
   }));
 
   // Plain text
-  tests.push(runTest("parses plain text", () => {
+  tests.push(await runTest("parses plain text", () => {
     const result = exporter.parseInline("Just text");
     assertEqual(result[0].type, "text" as MarkdownNodeType, "Text type");
     assertEqual(result[0].content, "Just text", "Text content");
   }));
 
   // Mixed content
-  tests.push(runTest("parses bold surrounded by text", () => {
+  tests.push(await runTest("parses bold surrounded by text", () => {
     const result = exporter.parseInline("before **bold** after");
     assertLength(result, 3, "Mixed content length");
     assertEqual(result[1].type, "bold" as MarkdownNodeType, "Middle is bold");
   }));
 
-  tests.push(runTest("parses multiple inline elements", () => {
+  tests.push(await runTest("parses multiple inline elements", () => {
     const result = exporter.parseInline("**bold** and *italic* and `code`");
     assertTrue(result.some(n => n.type === "bold"), "Has bold");
     assertTrue(result.some(n => n.type === "italic"), "Has italic");
@@ -445,18 +444,18 @@ function testParseInline(exporter: DOCXExporter): TestSuite {
 /**
  * convertToDocxElements Test Suite
  */
-function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
+async function testConvertToDocxElements(exporter: DOCXExporter): Promise<TestSuite> {
   const tests: TestResult[] = [];
 
   // Headings
-  tests.push(runTest("converts h1 to Paragraph", () => {
+  tests.push(await runTest("converts h1 to Paragraph", () => {
     const ast: MarkdownNode[] = [{ type: "heading", level: 1, children: [{ type: "text", content: "Title" }] }];
     const elements = exporter.convertToDocxElements(ast);
     assertGreaterThanOrEqual(elements.length, 1, "Has elements");
     assertInstanceOf(elements[0], Paragraph, "First element is Paragraph");
   }));
 
-  tests.push(runTest("converts multiple headings", () => {
+  tests.push(await runTest("converts multiple headings", () => {
     const ast: MarkdownNode[] = [
       { type: "heading", level: 1, children: [{ type: "text", content: "Title" }] },
       { type: "heading", level: 2, children: [{ type: "text", content: "Subtitle" }] },
@@ -466,7 +465,7 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
   }));
 
   // Paragraphs
-  tests.push(runTest("converts paragraph to Paragraph", () => {
+  tests.push(await runTest("converts paragraph to Paragraph", () => {
     const ast: MarkdownNode[] = [{ type: "paragraph", children: [{ type: "text", content: "Content" }] }];
     const elements = exporter.convertToDocxElements(ast);
     assertLength(elements, 1, "One element");
@@ -474,14 +473,14 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
   }));
 
   // Code blocks
-  tests.push(runTest("converts code block to Paragraphs", () => {
+  tests.push(await runTest("converts code block to Paragraphs", () => {
     const ast: MarkdownNode[] = [{ type: "codeblock", content: "const x = 1;\nconst y = 2;", language: "js" }];
     const elements = exporter.convertToDocxElements(ast);
     assertGreaterThanOrEqual(elements.length, 1, "Has elements");
   }));
 
   // Lists
-  tests.push(runTest("converts unordered list", () => {
+  tests.push(await runTest("converts unordered list", () => {
     const ast: MarkdownNode[] = [{
       type: "list", ordered: false,
       children: [
@@ -493,7 +492,7 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
     assertGreaterThanOrEqual(elements.length, 2, "Has list items");
   }));
 
-  tests.push(runTest("converts ordered list", () => {
+  tests.push(await runTest("converts ordered list", () => {
     const ast: MarkdownNode[] = [{
       type: "list", ordered: true,
       children: [
@@ -506,7 +505,7 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
   }));
 
   // Blockquotes
-  tests.push(runTest("converts blockquote", () => {
+  tests.push(await runTest("converts blockquote", () => {
     const ast: MarkdownNode[] = [{
       type: "blockquote",
       children: [{ type: "paragraph", children: [{ type: "text", content: "Quote" }] }]
@@ -517,7 +516,7 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
   }));
 
   // Horizontal rules
-  tests.push(runTest("converts horizontal rule", () => {
+  tests.push(await runTest("converts horizontal rule", () => {
     const ast: MarkdownNode[] = [{ type: "horizontalrule" }];
     const elements = exporter.convertToDocxElements(ast);
     assertLength(elements, 1, "One element");
@@ -525,7 +524,7 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
   }));
 
   // Tables
-  tests.push(runTest("converts table to Table", () => {
+  tests.push(await runTest("converts table to Table", () => {
     const ast: MarkdownNode[] = [{
       type: "table",
       children: [
@@ -549,7 +548,7 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
   }));
 
   // Complex document
-  tests.push(runTest("converts complex document", () => {
+  tests.push(await runTest("converts complex document", () => {
     const ast: MarkdownNode[] = [
       { type: "heading", level: 1, children: [{ type: "text", content: "Title" }] },
       { type: "paragraph", children: [{ type: "text", content: "Intro" }] },
@@ -568,23 +567,23 @@ function testConvertToDocxElements(exporter: DOCXExporter): TestSuite {
 /**
  * Mermaid Encoding Test Suite
  */
-function testMermaidEncoding(exporter: DOCXExporter): TestSuite {
+async function testMermaidEncoding(exporter: DOCXExporter): Promise<TestSuite> {
   const tests: TestResult[] = [];
 
-  tests.push(runTest("empty string returns empty", () => {
+  tests.push(await runTest("empty string returns empty", () => {
     assertEqual(exporter.encodeMermaidToKroki(""), "", "Empty input");
   }));
 
-  tests.push(runTest("whitespace returns empty", () => {
+  tests.push(await runTest("whitespace returns empty", () => {
     assertEqual(exporter.encodeMermaidToKroki("   "), "", "Whitespace");
   }));
 
-  tests.push(runTest("generates kroki.io URL", () => {
+  tests.push(await runTest("generates kroki.io URL", () => {
     const result = exporter.encodeMermaidToKroki("graph TD\n    A --> B");
     assertMatch(result, /^https:\/\/kroki\.io\/mermaid\/png\/.+/, "Kroki URL format");
   }));
 
-  tests.push(runTest("URL is safe encoded", () => {
+  tests.push(await runTest("URL is safe encoded", () => {
     const result = exporter.encodeMermaidToKroki("graph TD\n    A --> B");
     const encodedPart = result.replace("https://kroki.io/mermaid/png/", "");
     assertNotContains(encodedPart, "+", "No + in URL");
@@ -592,7 +591,7 @@ function testMermaidEncoding(exporter: DOCXExporter): TestSuite {
     assertNotContains(encodedPart, "=", "No = in encoded part");
   }));
 
-  tests.push(runTest("handles special characters", () => {
+  tests.push(await runTest("handles special characters", () => {
     const result = exporter.encodeMermaidToKroki("graph TD\n    A[\"Hello\"] --> B");
     assertMatch(result, /^https:\/\/kroki\.io\/mermaid\/png\/.+/, "Valid URL");
   }));
@@ -603,24 +602,24 @@ function testMermaidEncoding(exporter: DOCXExporter): TestSuite {
 /**
  * generateDocument Test Suite
  */
-function testGenerateDocument(exporter: DOCXExporter): TestSuite {
+async function testGenerateDocument(exporter: DOCXExporter): Promise<TestSuite> {
   const tests: TestResult[] = [];
 
-  tests.push(runTest("generates document from simple markdown", async () => {
+  tests.push(await runTest("generates document from simple markdown", async () => {
     const markdown = "# Test\n\nThis is a test.";
     const buffer = await exporter.generateDocument(markdown);
     assertInstanceOf(buffer, Uint8Array, "Returns Uint8Array");
     assertGreaterThan(buffer.length, 0, "Buffer has content");
   }));
 
-  tests.push(runTest("generates document with custom title", async () => {
+  tests.push(await runTest("generates document with custom title", async () => {
     const markdown = "# Custom Title\n\nContent here.";
     const buffer = await exporter.generateDocument(markdown, { title: "My Doc" });
     assertInstanceOf(buffer, Uint8Array, "Returns Uint8Array");
     assertGreaterThan(buffer.length, 0, "Buffer has content");
   }));
 
-  tests.push(runTest("generates document with complex content", async () => {
+  tests.push(await runTest("generates document with complex content", async () => {
     const markdown = `# Heading 1
 
 This is a paragraph with **bold** and *italic* text.
@@ -647,7 +646,7 @@ const x = 1;
     assertGreaterThan(buffer.length, 100, "Buffer has substantial content");
   }));
 
-  tests.push(runTest("handles empty markdown", async () => {
+  tests.push(await runTest("handles empty markdown", async () => {
     const buffer = await exporter.generateDocument("");
     assertInstanceOf(buffer, Uint8Array, "Returns Uint8Array");
   }));
@@ -658,10 +657,10 @@ const x = 1;
 /**
  * Integration Test Suite
  */
-function testIntegration(exporter: DOCXExporter): TestSuite {
+async function testIntegration(exporter: DOCXExporter): Promise<TestSuite> {
   const tests: TestResult[] = [];
 
-  tests.push(runTest("full markdown to DOCX pipeline", () => {
+  tests.push(await runTest("full markdown to DOCX pipeline", () => {
     const md = "# Hello\n\n**bold** and *italic*\n\n```js\ncode\n```\n\n- Item";
     const ast = exporter.parseMarkdown(md);
     const elements = exporter.convertToDocxElements(ast);
@@ -673,13 +672,13 @@ function testIntegration(exporter: DOCXExporter): TestSuite {
     assertTrue(ast.some(n => n.type === "list"), "AST has list");
   }));
 
-  tests.push(runTest("nested formatting works", () => {
+  tests.push(await runTest("nested formatting works", () => {
     const result = exporter.parseInline("**bold with `code`**");
     assertEqual(result[0].type, "bold" as MarkdownNodeType, "Outer is bold");
     assertTrue(result[0].children?.some(c => c.type === "code") ?? false, "Has nested code");
   }));
 
-  tests.push(runTest("full document generation pipeline", async () => {
+  tests.push(await runTest("full document generation pipeline", async () => {
     const md = "# Test Document\n\nThis is a **test**.\n\n| A | B |\n|---|---|\n| 1 | 2 |";
     const buffer = await exporter.generateDocument(md, { title: "Test" });
 
@@ -687,21 +686,21 @@ function testIntegration(exporter: DOCXExporter): TestSuite {
     assertGreaterThan(buffer.length, 0, "Buffer not empty");
   }));
 
-  tests.push(runTest("handles special characters", () => {
+  tests.push(await runTest("handles special characters", () => {
     const md = "Chars: & < > \" '";
     const ast = exporter.parseMarkdown(md);
     assertLength(ast, 1, "One paragraph");
     assertEqual(ast[0].type, "paragraph" as MarkdownNodeType, "Is paragraph");
   }));
 
-  tests.push(runTest("handles unicode content", () => {
+  tests.push(await runTest("handles unicode content", () => {
     const md = "# 日本語タイトル\n\nこれはテストです。";
     const ast = exporter.parseMarkdown(md);
     assertGreaterThanOrEqual(ast.length, 2, "Has heading and paragraph");
     assertEqual(ast[0].type, "heading" as MarkdownNodeType, "First is heading");
   }));
 
-  tests.push(runTest("handles long content", () => {
+  tests.push(await runTest("handles long content", () => {
     const longContent = "This is a paragraph. ".repeat(100);
     const md = `# Long Document\n\n${longContent}`;
     const ast = exporter.parseMarkdown(md);
@@ -717,8 +716,8 @@ function testIntegration(exporter: DOCXExporter): TestSuite {
 /**
  * Acceptance Criteria Validation Test Suite
  */
-function testAcceptanceCriteria(exporter: DOCXExporter): TestSuite {
-  const tests: TestResult[] = [];
+async function testAcceptanceCriteria(exporter: DOCXExporter): Promise<TestSuite> {
+  const tests: Promise<TestResult>[] = [];
 
   // Criterion 1: DOCX files generate valid buffer
   tests.push(runTest("AC1: DOCX files generate valid Uint8Array buffer", async () => {
@@ -860,64 +859,25 @@ console.log(greeting);
     assertEqual(buffer[1], 0x4B, "ZIP header K");
   }));
 
-  return { name: "AcceptanceCriteria", tests };
+  return { name: "AcceptanceCriteria", tests: await Promise.all(tests) };
 }
 
 /**
  * Run all test suites and return results
  */
-export function runAllTests(): { suites: TestSuite[]; summary: { total: number; passed: number; failed: number } } {
+export async function runAllTests(): Promise<{ suites: TestSuite[]; summary: { total: number; passed: number; failed: number } }> {
   const mockApp = createMockApp();
-  // Use type assertion since we're mocking the App
   const exporter = new DOCXExporter(mockApp as never);
 
-  // Run synchronous test suites
-  const syncSuites: TestSuite[] = [
+  const suites: TestSuite[] = await Promise.all([
     testParseMarkdown(exporter),
     testParseInline(exporter),
     testConvertToDocxElements(exporter),
     testMermaidEncoding(exporter),
     testIntegration(exporter),
-  ];
-
-  // Run async test suites
-  const generateDocSuite = testGenerateDocument(exporter);
-  const acceptanceSuite = testAcceptanceCriteria(exporter);
-
-  const suites = [...syncSuites, generateDocSuite, acceptanceSuite];
-
-  let total = 0;
-  let passed = 0;
-
-  for (const suite of suites) {
-    for (const test of suite.tests) {
-      total++;
-      if (test.passed) passed++;
-    }
-  }
-
-  return {
-    suites,
-    summary: { total, passed, failed: total - passed },
-  };
-}
-
-/**
- * Run tests synchronously (for non-async test contexts)
- */
-export function runAllTestsSync(): { suites: TestSuite[]; summary: { total: number; passed: number; failed: number } } {
-  const mockApp = createMockApp();
-  // Use type assertion since we're mocking the App
-  const exporter = new DOCXExporter(mockApp as never);
-
-  const suites: TestSuite[] = [
-    testParseMarkdown(exporter),
-    testParseInline(exporter),
-    testConvertToDocxElements(exporter),
-    testMermaidEncoding(exporter),
-    testIntegration(exporter),
+    testGenerateDocument(exporter),
     testAcceptanceCriteria(exporter),
-  ];
+  ]);
 
   let total = 0;
   let passed = 0;
@@ -934,6 +894,8 @@ export function runAllTestsSync(): { suites: TestSuite[]; summary: { total: numb
     summary: { total, passed, failed: total - passed },
   };
 }
+
+
 
 /**
  * Format test results for display

@@ -797,7 +797,7 @@ function testAcceptanceCriteria(exporter: HTMLExporter): TestSuite {
  */
 export function runAllTests(): { suites: TestSuite[]; summary: { total: number; passed: number; failed: number } } {
   const mockApp = createMockApp();
-  const exporter = new HTMLExporter(mockApp);
+  const exporter = new HTMLExporter(mockApp as any);
 
   const suites: TestSuite[] = [
     testParseMarkdown(exporter),
