@@ -24,7 +24,7 @@ export default [
       ...obsidianmd.configs.recommended,
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "obsidianmd/ui/sentence-case": ["error", {
-        brands: ["AWS", "Bedrock", "Claude", "Google", "Gemini", "Groq", "GroqCloud", "Llama", "Mixtral", "Mermaid", "Studio", "Word"],
+        brands: ["AWS", "Bedrock", "Claude", "Google", "Gemini", "Groq", "GroqCloud", "Llama", "Markdown", "Mixtral", "Mermaid", "Studio", "Word"],
         acronyms: ["AI", "API", "ID", "SSE", "LLM", "HTML", "DOCX"],
       }],
     },

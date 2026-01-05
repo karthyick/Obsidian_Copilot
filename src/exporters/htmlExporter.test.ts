@@ -15,6 +15,7 @@
  * - Style configuration: Configurable styles from settings
  */
 
+import { App } from "obsidian";
 import { HTMLExporter, MarkdownNode, MarkdownNodeType } from "./htmlExporter";
 import { HTMLExportStyles, DEFAULT_HTML_EXPORT_STYLES } from "../types";
 
@@ -797,7 +798,7 @@ function testAcceptanceCriteria(exporter: HTMLExporter): TestSuite {
  */
 export function runAllTests(): { suites: TestSuite[]; summary: { total: number; passed: number; failed: number } } {
   const mockApp = createMockApp();
-  const exporter = new HTMLExporter(mockApp as any);
+  const exporter = new HTMLExporter(mockApp as unknown as App);
 
   const suites: TestSuite[] = [
     testParseMarkdown(exporter),

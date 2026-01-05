@@ -195,7 +195,7 @@ export default class AIAssistantPlugin extends Plugin {
         }
 
         if (activeFile.extension !== "md") {
-          new Notice("Only markdown files can be exported");
+          new Notice("Only Markdown files can be exported");
           return;
         }
 
@@ -225,7 +225,7 @@ export default class AIAssistantPlugin extends Plugin {
         }
 
         if (activeFile.extension !== "md") {
-          new Notice("Only markdown files can be exported");
+          new Notice("Only Markdown files can be exported");
           return;
         }
 
@@ -257,7 +257,7 @@ export default class AIAssistantPlugin extends Plugin {
         }
 
         if (activeFile.extension !== "md") {
-          new Notice("Only markdown files can be exported");
+          new Notice("Only Markdown files can be exported");
           return;
         }
 
@@ -289,7 +289,7 @@ export default class AIAssistantPlugin extends Plugin {
         }
 
         if (activeFile.extension !== "md") {
-          new Notice("Only markdown files can be exported");
+          new Notice("Only Markdown files can be exported");
           return;
         }
 

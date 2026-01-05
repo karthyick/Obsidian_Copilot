@@ -247,7 +247,7 @@ export async function openExportModal(
   }
 
   if (activeFile.extension !== "md") {
-    new Notice("Only markdown files can be exported");
+    new Notice("Only Markdown files can be exported");
     return;
   }
 
