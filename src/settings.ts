@@ -985,25 +985,25 @@ export function validateSettings(settings: AIAssistantSettings): {
         errors.push("AWS Region is required");
       }
       if (!settings.bedrockModelId) {
-        errors.push("Bedrock Model is required");
+        errors.push("Bedrock model is required");
       }
       break;
 
     case "gemini":
       if (!settings.geminiApiKey) {
-        errors.push("Gemini API Key is required");
+        errors.push("Gemini API key is required");
       }
       if (!settings.geminiModelId) {
-        errors.push("Gemini Model is required");
+        errors.push("Gemini model is required");
       }
       break;
 
     case "groq":
       if (!settings.groqApiKey) {
-        errors.push("Groq API Key is required");
+        errors.push("Groq API key is required");
       }
       if (!settings.groqModelId) {
-        errors.push("Groq Model is required");
+        errors.push("Groq model is required");
       }
       break;
   }

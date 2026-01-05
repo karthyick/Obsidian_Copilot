@@ -16,8 +16,6 @@
 import {
   PcConnectionManager,
   getPcConnectionManager,
-  ConnectionState,
-  PcConnectionManagerConfig,
 } from "./pcConnectionManager";
 
 interface TestResult {
