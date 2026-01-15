@@ -1,6 +1,6 @@
 {
   "name": "ai-assistant-multi-provider",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "AI chatbot powered by AWS Bedrock with full note control capabilities",
   "main": "main.js",
   "scripts": {

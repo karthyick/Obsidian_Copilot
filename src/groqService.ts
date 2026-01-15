@@ -1,6 +1,6 @@
 import { requestUrl } from "obsidian";
 import {
-  AIAssistantSettings,
+  GroqSettings,
   LLMMessage,
   ConnectionTestResult,
   ILLMService,
@@ -8,38 +8,44 @@ import {
   GroqResponse,
   GroqMessage,
   GroqStreamChunk,
+  LLMProviderSettings,
+  AIProvider,
 } from "./types";
 
 /**
  * Service for interacting with Groq API
  */
 export class GroqService implements ILLMService {
-  private settings: AIAssistantSettings;
+  public readonly providerName: AIProvider = "groq";
+  private groqSettings: GroqSettings;
+  public commonSettings: LLMProviderSettings;
   private baseUrl = "https://api.groq.com/openai/v1";
 
-  constructor(settings: AIAssistantSettings) {
-    this.settings = settings;
+  constructor(groqSettings: GroqSettings, commonSettings: LLMProviderSettings) {
+    this.groqSettings = groqSettings;
+    this.commonSettings = commonSettings;
   }
 
   /**
    * Reinitialize with updated settings
    */
-  public reinitialize(settings: AIAssistantSettings): void {
-    this.settings = settings;
+  public reinitialize(groqSettings: GroqSettings, commonSettings: LLMProviderSettings): void {
+    this.groqSettings = groqSettings;
+    this.commonSettings = commonSettings;
   }
 
   /**
    * Check if the service is properly initialized
    */
   public isInitialized(): boolean {
-    return !!this.settings.groqApiKey;
+    return !!this.groqSettings.groqApiKey;
   }
 
   /**
    * Test the connection to Groq
    */
   public async testConnection(): Promise<ConnectionTestResult> {
-    if (!this.settings.groqApiKey) {
+    if (!this.groqSettings.groqApiKey) {
       return {
         success: false,
         message: "Groq API key is not configured",
@@ -79,7 +85,7 @@ export class GroqService implements ILLMService {
     messages: LLMMessage[],
     systemPrompt: string
   ): Promise<string> {
-    if (!this.settings.groqApiKey) {
+    if (!this.groqSettings.groqApiKey) {
       throw new Error("Groq API key is not configured");
     }
 
@@ -87,8 +93,8 @@ export class GroqService implements ILLMService {
     const requestBody: GroqRequestBody = {
       model: this.getEffectiveModelId(),
       messages: groqMessages,
-      max_tokens: this.settings.maxTokens,
-      temperature: this.settings.temperature,
+      max_tokens: this.commonSettings.maxTokens,
+      temperature: this.commonSettings.temperature,
       stream: false,
     };
 
@@ -98,7 +104,7 @@ export class GroqService implements ILLMService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.settings.groqApiKey}`,
+          Authorization: `Bearer ${this.groqSettings.groqApiKey}`,
         },
         body: JSON.stringify(requestBody),
       });
@@ -122,7 +128,7 @@ export class GroqService implements ILLMService {
     messages: LLMMessage[],
     systemPrompt: string
   ): AsyncGenerator<string, void, unknown> {
-    if (!this.settings.groqApiKey) {
+    if (!this.groqSettings.groqApiKey) {
       throw new Error("Groq API key is not configured");
     }
 
@@ -130,8 +136,8 @@ export class GroqService implements ILLMService {
     const requestBody: GroqRequestBody = {
       model: this.getEffectiveModelId(),
       messages: groqMessages,
-      max_tokens: this.settings.maxTokens,
-      temperature: this.settings.temperature,
+      max_tokens: this.commonSettings.maxTokens,
+      temperature: this.commonSettings.temperature,
       stream: true,
     };
 
@@ -144,7 +150,7 @@ export class GroqService implements ILLMService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.settings.groqApiKey}`,
+          Authorization: `Bearer ${this.groqSettings.groqApiKey}`,
         },
         body: JSON.stringify(requestBody),
       });
@@ -257,9 +263,9 @@ export class GroqService implements ILLMService {
    * Get the effective model ID (custom if "other" selected)
    */
   private getEffectiveModelId(): string {
-    if (this.settings.groqModelId === "other") {
-      return this.settings.groqCustomModelId || "llama-3.3-70b-versatile";
+    if (this.groqSettings.groqModelId === "other") {
+      return this.groqSettings.groqCustomModelId || "llama-3.3-70b-versatile";
     }
-    return this.settings.groqModelId;
+    return this.groqSettings.groqModelId;
   }
 }

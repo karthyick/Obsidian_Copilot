@@ -4,24 +4,29 @@ import {
   InvokeModelWithResponseStreamCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 import {
-  AIAssistantSettings,
   BedrockMessage,
   BedrockRequestBody,
   BedrockResponse,
+  BedrockSettings,
   ConnectionTestResult,
   ILLMService,
   LLMMessage,
+  LLMProviderSettings,
+  AIProvider,
 } from "./types";
 
 /**
  * Service for interacting with AWS Bedrock Claude models
  */
 export class BedrockService implements ILLMService {
+  public readonly providerName: AIProvider = "bedrock";
   private client: BedrockRuntimeClient | null = null;
-  private settings: AIAssistantSettings;
+  private bedrockSettings: BedrockSettings;
+  public commonSettings: LLMProviderSettings;
 
-  constructor(settings: AIAssistantSettings) {
-    this.settings = settings;
+  constructor(bedrockSettings: BedrockSettings, commonSettings: LLMProviderSettings) {
+    this.bedrockSettings = bedrockSettings;
+    this.commonSettings = commonSettings;
     this.initializeClient();
   }
 
@@ -29,7 +34,7 @@ export class BedrockService implements ILLMService {
    * Initialize the Bedrock client with current settings
    */
   private initializeClient(): void {
-    if (!this.settings.awsAccessKeyId || !this.settings.awsSecretAccessKey) {
+    if (!this.bedrockSettings.awsAccessKeyId || !this.bedrockSettings.awsSecretAccessKey) {
       this.client = null;
       return;
     }
@@ -39,16 +44,16 @@ export class BedrockService implements ILLMService {
       secretAccessKey: string;
       sessionToken?: string;
     } = {
-      accessKeyId: this.settings.awsAccessKeyId,
-      secretAccessKey: this.settings.awsSecretAccessKey,
+      accessKeyId: this.bedrockSettings.awsAccessKeyId,
+      secretAccessKey: this.bedrockSettings.awsSecretAccessKey,
     };
 
-    if (this.settings.awsSessionToken) {
-      credentials.sessionToken = this.settings.awsSessionToken;
+    if (this.bedrockSettings.awsSessionToken) {
+      credentials.sessionToken = this.bedrockSettings.awsSessionToken;
     }
 
     this.client = new BedrockRuntimeClient({
-      region: this.settings.awsRegion,
+      region: this.bedrockSettings.awsRegion,
       credentials,
     });
   }
@@ -56,8 +61,9 @@ export class BedrockService implements ILLMService {
   /**
    * Reinitialize the client with updated settings
    */
-  public reinitialize(settings: AIAssistantSettings): void {
-    this.settings = settings;
+  public reinitialize(bedrockSettings: BedrockSettings, commonSettings: LLMProviderSettings): void {
+    this.bedrockSettings = bedrockSettings;
+    this.commonSettings = commonSettings;
     this.initializeClient();
   }
 
@@ -136,8 +142,8 @@ export class BedrockService implements ILLMService {
     const bedrockMessages = this.convertToBedrockFormat(messages);
     const requestBody: BedrockRequestBody = {
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens: this.settings.maxTokens,
-      temperature: this.settings.temperature,
+      max_tokens: this.commonSettings.maxTokens,
+      temperature: this.commonSettings.temperature,
       system: systemPrompt,
       messages: bedrockMessages,
     };
@@ -182,8 +188,8 @@ export class BedrockService implements ILLMService {
     const bedrockMessages = this.convertToBedrockFormat(messages);
     const requestBody: BedrockRequestBody = {
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens: this.settings.maxTokens,
-      temperature: this.settings.temperature,
+      max_tokens: this.commonSettings.maxTokens,
+      temperature: this.commonSettings.temperature,
       system: systemPrompt,
       messages: bedrockMessages,
     };
@@ -293,10 +299,10 @@ export class BedrockService implements ILLMService {
    * Get the effective model ID (custom if "other" selected)
    */
   private getEffectiveModelId(): string {
-    if (this.settings.bedrockModelId === "other") {
-      return this.settings.bedrockCustomModelId || "anthropic.claude-sonnet-4-20250514-v1:0";
+    if (this.bedrockSettings.bedrockModelId === "other") {
+      return this.bedrockSettings.bedrockCustomModelId || "anthropic.claude-sonnet-4-20250514-v1:0";
     }
-    return this.settings.bedrockModelId;
+    return this.bedrockSettings.bedrockModelId;
   }
 
   /**
@@ -310,6 +316,6 @@ export class BedrockService implements ILLMService {
    * Get the current region
    */
   public getRegion(): string {
-    return this.settings.awsRegion;
+    return this.bedrockSettings.awsRegion;
   }
 }

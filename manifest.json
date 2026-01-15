@@ -1,7 +1,7 @@
 {
   "id": "multi-provider-ai-chat",
   "name": "Multi-Provider AI Chat",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "minAppVersion": "1.0.0",
   "description": "AI chatbot with multi-provider support (AWS Bedrock, Google Gemini, Groq) and full note editing capabilities.",
   "author": "KR",

@@ -5,6 +5,7 @@ import {
   LLMMessage,
   ConnectionTestResult,
   PROVIDER_NAMES,
+  LLMProviderSettings,
 } from "./types";
 import { BedrockService } from "./bedrockService";
 import { GeminiService } from "./geminiService";
@@ -21,9 +22,17 @@ export class LLMServiceManager {
 
   constructor(settings: AIAssistantSettings) {
     this.settings = settings;
-    this.bedrockService = new BedrockService(settings);
-    this.geminiService = new GeminiService(settings);
-    this.groqService = new GroqService(settings);
+    const commonSettings: LLMProviderSettings = {
+      maxTokens: settings.maxTokens,
+      temperature: settings.temperature,
+      systemPrompt: settings.systemPrompt,
+      autoIncludeContext: settings.autoIncludeContext,
+      streamResponses: settings.streamResponses,
+      excludedNotes: settings.excludedNotes,
+    };
+    this.bedrockService = new BedrockService(settings.bedrock, commonSettings);
+    this.geminiService = new GeminiService(settings.gemini, commonSettings);
+    this.groqService = new GroqService(settings.groq, commonSettings);
   }
 
   /**
@@ -38,7 +47,7 @@ export class LLMServiceManager {
       case "groq":
         return this.groqService;
       default:
-        return this.bedrockService;
+        return this.bedrockService; // Default to Bedrock if provider is not set or unknown
     }
   }
 
@@ -47,9 +56,19 @@ export class LLMServiceManager {
    */
   public reinitialize(settings: AIAssistantSettings): void {
     this.settings = settings;
-    this.bedrockService.reinitialize(settings);
-    this.geminiService.reinitialize(settings);
-    this.groqService.reinitialize(settings);
+    const commonSettings: LLMProviderSettings = {
+      maxTokens: settings.maxTokens,
+      temperature: settings.temperature,
+      systemPrompt: settings.systemPrompt,
+      autoIncludeContext: settings.autoIncludeContext,
+      streamResponses: settings.streamResponses,
+      excludedNotes: settings.excludedNotes,
+    };
+
+    // Reinitialize each service with its specific settings and the common settings
+    this.bedrockService.reinitialize(settings.bedrock, commonSettings);
+    this.geminiService.reinitialize(settings.gemini, commonSettings);
+    this.groqService.reinitialize(settings.groq, commonSettings);
   }
 
   /**
@@ -97,15 +116,26 @@ export class LLMServiceManager {
   ): Promise<ConnectionTestResult> {
     let service: ILLMService;
 
+    // Create common settings from the current general settings
+    const commonSettings: LLMProviderSettings = {
+      maxTokens: this.settings.maxTokens,
+      temperature: this.settings.temperature,
+      systemPrompt: this.settings.systemPrompt,
+      autoIncludeContext: this.settings.autoIncludeContext,
+      streamResponses: this.settings.streamResponses,
+      excludedNotes: this.settings.excludedNotes,
+    };
+
     switch (provider) {
       case "bedrock":
-        service = this.bedrockService;
+        // Dynamically create a service for testing with specific settings
+        service = new BedrockService(this.settings.bedrock, commonSettings);
         break;
       case "gemini":
-        service = this.geminiService;
+        service = new GeminiService(this.settings.gemini, commonSettings);
         break;
       case "groq":
-        service = this.groqService;
+        service = new GroqService(this.settings.groq, commonSettings);
         break;
       default:
         return {
@@ -166,11 +196,11 @@ export class LLMServiceManager {
   public getCurrentModelId(): string {
     switch (this.settings.provider) {
       case "bedrock":
-        return this.settings.bedrockModelId;
+        return this.settings.bedrock.bedrockModelId;
       case "gemini":
-        return this.settings.geminiModelId;
+        return this.settings.gemini.geminiModelId;
       case "groq":
-        return this.settings.groqModelId;
+        return this.settings.groq.groqModelId;
       default:
         return "";
     }
@@ -183,17 +213,36 @@ export class LLMServiceManager {
     AIProvider,
     { configured: boolean; active: boolean }
   > {
+    // To check configuration status, we need to instantiate services with their respective settings.
+    // However, to avoid creating new instances each time and potential side effects,
+    // we can directly check the settings stored in this.settings
+    const commonSettings: LLMProviderSettings = {
+      maxTokens: this.settings.maxTokens,
+      temperature: this.settings.temperature,
+      systemPrompt: this.settings.systemPrompt,
+      autoIncludeContext: this.settings.autoIncludeContext,
+      streamResponses: this.settings.streamResponses,
+      excludedNotes: this.settings.excludedNotes,
+    };
+
+    // Creating temporary service instances for status check
+    // This is safe as it doesn't modify state and is only for checking isInitialized
+    const bedrockConfigured = new BedrockService(this.settings.bedrock, commonSettings).isInitialized();
+    const geminiConfigured = new GeminiService(this.settings.gemini, commonSettings).isInitialized();
+    const groqConfigured = new GroqService(this.settings.groq, commonSettings).isInitialized();
+
+
     return {
       bedrock: {
-        configured: this.bedrockService.isInitialized(),
+        configured: bedrockConfigured,
         active: this.settings.provider === "bedrock",
       },
       gemini: {
-        configured: this.geminiService.isInitialized(),
+        configured: geminiConfigured,
         active: this.settings.provider === "gemini",
       },
       groq: {
-        configured: this.groqService.isInitialized(),
+        configured: groqConfigured,
         active: this.settings.provider === "groq",
       },
     };

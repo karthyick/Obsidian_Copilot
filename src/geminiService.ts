@@ -1,44 +1,50 @@
 import { requestUrl } from "obsidian";
 import {
-  AIAssistantSettings,
+  GeminiSettings,
   LLMMessage,
   ConnectionTestResult,
   ILLMService,
   GeminiRequestBody,
   GeminiResponse,
   GeminiContent,
+  LLMProviderSettings,
+  AIProvider,
 } from "./types";
 
 /**
  * Service for interacting with Google Gemini API
  */
 export class GeminiService implements ILLMService {
-  private settings: AIAssistantSettings;
+  public readonly providerName: AIProvider = "gemini";
+  private geminiSettings: GeminiSettings;
+  public commonSettings: LLMProviderSettings;
   private baseUrl = "https://generativelanguage.googleapis.com/v1beta";
 
-  constructor(settings: AIAssistantSettings) {
-    this.settings = settings;
+  constructor(geminiSettings: GeminiSettings, commonSettings: LLMProviderSettings) {
+    this.geminiSettings = geminiSettings;
+    this.commonSettings = commonSettings;
   }
 
   /**
    * Reinitialize with updated settings
    */
-  public reinitialize(settings: AIAssistantSettings): void {
-    this.settings = settings;
+  public reinitialize(geminiSettings: GeminiSettings, commonSettings: LLMProviderSettings): void {
+    this.geminiSettings = geminiSettings;
+    this.commonSettings = commonSettings;
   }
 
   /**
    * Check if the service is properly initialized
    */
   public isInitialized(): boolean {
-    return !!this.settings.geminiApiKey;
+    return !!this.geminiSettings.geminiApiKey;
   }
 
   /**
    * Test the connection to Gemini
    */
   public async testConnection(): Promise<ConnectionTestResult> {
-    if (!this.settings.geminiApiKey) {
+    if (!this.geminiSettings.geminiApiKey) {
       return {
         success: false,
         message: "Gemini API key is not configured",
@@ -78,7 +84,7 @@ export class GeminiService implements ILLMService {
     messages: LLMMessage[],
     systemPrompt: string
   ): Promise<string> {
-    if (!this.settings.geminiApiKey) {
+    if (!this.geminiSettings.geminiApiKey) {
       throw new Error("Gemini API key is not configured");
     }
 
@@ -86,8 +92,8 @@ export class GeminiService implements ILLMService {
     const requestBody: GeminiRequestBody = {
       contents,
       generationConfig: {
-        maxOutputTokens: this.settings.maxTokens,
-        temperature: this.settings.temperature,
+        maxOutputTokens: this.commonSettings.maxTokens,
+        temperature: this.commonSettings.temperature,
       },
     };
 
@@ -97,7 +103,7 @@ export class GeminiService implements ILLMService {
       };
     }
 
-    const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:generateContent?key=${this.settings.geminiApiKey}`;
+    const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:generateContent?key=${this.geminiSettings.geminiApiKey}`;
 
     try {
       const response = await requestUrl({
@@ -131,7 +137,7 @@ export class GeminiService implements ILLMService {
     messages: LLMMessage[],
     systemPrompt: string
   ): AsyncGenerator<string, void, unknown> {
-    if (!this.settings.geminiApiKey) {
+    if (!this.geminiSettings.geminiApiKey) {
       throw new Error("Gemini API key is not configured");
     }
 
@@ -139,8 +145,8 @@ export class GeminiService implements ILLMService {
     const requestBody: GeminiRequestBody = {
       contents,
       generationConfig: {
-        maxOutputTokens: this.settings.maxTokens,
-        temperature: this.settings.temperature,
+        maxOutputTokens: this.commonSettings.maxTokens,
+        temperature: this.commonSettings.temperature,
       },
     };
 
@@ -150,7 +156,7 @@ export class GeminiService implements ILLMService {
       };
     }
 
-    const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:streamGenerateContent?key=${this.settings.geminiApiKey}&alt=sse`;
+    const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:streamGenerateContent?key=${this.geminiSettings.geminiApiKey}&alt=sse`;
 
     try {
       // REQUIRED: We use native fetch here because Obsidian's requestUrl doesn't support
@@ -258,9 +264,9 @@ export class GeminiService implements ILLMService {
    * Get the effective model ID (custom if "other" selected)
    */
   private getEffectiveModelId(): string {
-    if (this.settings.geminiModelId === "other") {
-      return this.settings.geminiCustomModelId || "gemini-2.0-flash";
+    if (this.geminiSettings.geminiModelId === "other") {
+      return this.geminiSettings.geminiCustomModelId || "gemini-2.0-flash";
     }
-    return this.settings.geminiModelId;
+    return this.geminiSettings.geminiModelId;
   }
 }

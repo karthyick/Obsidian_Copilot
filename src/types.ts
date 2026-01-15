@@ -4,6 +4,50 @@
 export type AIProvider = "bedrock" | "gemini" | "groq";
 
 /**
+ * Common LLM Provider Settings
+ */
+export interface LLMProviderSettings {
+  // Common settings
+  maxTokens: number;
+  temperature: number;
+  systemPrompt: string;
+  autoIncludeContext: boolean;
+  streamResponses: boolean;
+  // Excluded notes (paths that should never be included in context)
+  excludedNotes: string[];
+}
+
+/**
+ * AWS Bedrock specific settings
+ */
+export interface BedrockSettings {
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsSessionToken: string;
+  awsRegion: string;
+  bedrockModelId: string;
+  bedrockCustomModelId: string;
+}
+
+/**
+ * Google Gemini specific settings
+ */
+export interface GeminiSettings {
+  geminiApiKey: string;
+  geminiModelId: string;
+  geminiCustomModelId: string;
+}
+
+/**
+ * Groq specific settings
+ */
+export interface GroqSettings {
+  groqApiKey: string;
+  groqModelId: string;
+  groqCustomModelId: string;
+}
+
+/**
  * HTML Export Style Configuration
  */
 export interface HTMLExportStyles {
@@ -35,37 +79,14 @@ export interface HTMLExportStyles {
 /**
  * Plugin settings interface
  */
-export interface AIAssistantSettings {
+export interface AIAssistantSettings extends LLMProviderSettings {
   // Provider selection
   provider: AIProvider;
 
-  // AWS Bedrock settings
-  awsAccessKeyId: string;
-  awsSecretAccessKey: string;
-  awsSessionToken: string;
-  awsRegion: string;
-  bedrockModelId: string;
-  bedrockCustomModelId: string;
-
-  // Google Gemini settings
-  geminiApiKey: string;
-  geminiModelId: string;
-  geminiCustomModelId: string;
-
-  // Groq settings
-  groqApiKey: string;
-  groqModelId: string;
-  groqCustomModelId: string;
-
-  // Common settings
-  maxTokens: number;
-  temperature: number;
-  systemPrompt: string;
-  autoIncludeContext: boolean;
-  streamResponses: boolean;
-
-  // Excluded notes (paths that should never be included in context)
-  excludedNotes: string[];
+  // Nested provider-specific settings
+  bedrock: BedrockSettings;
+  gemini: GeminiSettings;
+  groq: GroqSettings;
 
   // HTML Export settings
   htmlExportStyles: HTMLExportStyles;
@@ -106,24 +127,6 @@ export const DEFAULT_HTML_EXPORT_STYLES: HTMLExportStyles = {
 export const DEFAULT_SETTINGS: AIAssistantSettings = {
   provider: "bedrock",
 
-  // AWS Bedrock
-  awsAccessKeyId: "",
-  awsSecretAccessKey: "",
-  awsSessionToken: "",
-  awsRegion: "us-east-1",
-  bedrockModelId: "anthropic.claude-sonnet-4-20250514-v1:0",
-  bedrockCustomModelId: "",
-
-  // Gemini
-  geminiApiKey: "",
-  geminiModelId: "gemini-2.0-flash",
-  geminiCustomModelId: "",
-
-  // Groq
-  groqApiKey: "",
-  groqModelId: "llama-3.3-70b-versatile",
-  groqCustomModelId: "",
-
   // Common
   maxTokens: 8192,
   temperature: 0.7,
@@ -133,6 +136,26 @@ export const DEFAULT_SETTINGS: AIAssistantSettings = {
 
   // Excluded notes
   excludedNotes: [],
+
+  // Nested provider settings
+  bedrock: {
+    awsAccessKeyId: "",
+    awsSecretAccessKey: "",
+    awsSessionToken: "",
+    awsRegion: "us-east-1",
+    bedrockModelId: "anthropic.claude-sonnet-4-20250514-v1:0",
+    bedrockCustomModelId: "",
+  },
+  gemini: {
+    geminiApiKey: "",
+    geminiModelId: "gemini-2.0-flash",
+    geminiCustomModelId: "",
+  },
+  groq: {
+    groqApiKey: "",
+    groqModelId: "llama-3.3-70b-versatile",
+    groqCustomModelId: "",
+  },
 
   // HTML Export styles
   htmlExportStyles: DEFAULT_HTML_EXPORT_STYLES,
@@ -424,6 +447,8 @@ export interface ConnectionTestResult {
  * LLM Service interface
  */
 export interface ILLMService {
+  providerName: AIProvider;
+  commonSettings: LLMProviderSettings;
   sendMessage(messages: LLMMessage[], systemPrompt: string): Promise<string>;
   sendMessageStream(
     messages: LLMMessage[],
@@ -431,6 +456,8 @@ export interface ILLMService {
   ): AsyncGenerator<string, void, unknown>;
   testConnection(): Promise<ConnectionTestResult>;
   isInitialized(): boolean;
+  // New method for reinitializing with specific settings
+  reinitialize(commonSettings: LLMProviderSettings): void;
 }
 
 /**
