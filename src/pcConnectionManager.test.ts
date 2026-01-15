@@ -524,7 +524,8 @@ async function testConnectionChecking(): Promise<TestSuite> {
     PcConnectionManager.resetInstance();
     const manager = PcConnectionManager.getInstance();
     await manager.checkConnection(async () => {
-      throw "string error";
+      // Intentionally throwing string to test non-Error handling
+      throw new Error("string error");
     });
     assertFalse(manager.isConnected(), "Not connected");
     assertEqual(manager.getLastError()?.message, "string error", "String error converted");

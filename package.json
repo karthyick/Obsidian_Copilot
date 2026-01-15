@@ -1,11 +1,13 @@
 {
   "name": "ai-assistant-multi-provider",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "AI chatbot powered by AWS Bedrock with full note control capabilities",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [
