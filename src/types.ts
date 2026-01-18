@@ -235,7 +235,7 @@ export interface NoteContext {
  * Common LLM message format
  */
 export interface LLMMessage {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -444,20 +444,112 @@ export interface ConnectionTestResult {
 }
 
 /**
+ * Options for context summarization.
+ */
+export interface ContextSummaryOptions {
+  maxLength?: number; // Maximum length of the summary in characters or tokens
+  strategy?: 'auto' | 'truncate' | 'summarize'; // Strategy: auto (system decides), truncate (cut text), summarize (LLM-based)
+}
+
+/**
+ * Base telemetry event interface.
+ */
+export interface TelemetryEvent {
+  eventType: string; // e.g., 'llm_call', 'feedback_submitted', 'plugin_loaded'
+  timestamp: number; // Unix timestamp
+  data: Record<string, any>; // Arbitrary data related to the event
+}
+
+/**
+ * Telemetry event for LLM calls.
+ */
+export interface LlmCallTelemetryEvent extends TelemetryEvent {
+  eventType: 'llm_call';
+  data: {
+    provider: AIProvider;
+    model: string;
+    durationMs: number; // Duration of the call in milliseconds
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    success: boolean;
+    errorMessage?: string;
+  };
+}
+
+/**
+ * Telemetry event for user feedback.
+ */
+export interface FeedbackTelemetryEvent extends TelemetryEvent {
+  eventType: 'feedback_submitted';
+  data: {
+    feedbackId: string;
+    messageId: string;
+    type: 'upvote' | 'downvote' | 'correction';
+    comment?: string;
+    // Potentially include more context from UserFeedback object if needed
+  };
+}
+
+/**
+ * User feedback interface
+ */
+export interface UserFeedback {
+  id: string; // Unique ID for this feedback entry
+  messageId: string; // ID of the ChatMessage this feedback is for
+  timestamp: number; // Unix timestamp when the feedback was given
+  type: 'upvote' | 'downvote' | 'correction'; // Type of feedback
+  comment?: string; // Optional text comment
+  correctedResponse?: string; // Optional, if user provided a corrected version
+  originalPrompt?: string; // The original user prompt
+  originalResponse?: string; // The original LLM response
+}
+
+/**
+ * Training data interface
+ */
+export interface TrainingData {
+  id: string; // Unique ID for this training data entry
+  conversationId: string; // The ID of the conversation
+  prompt: string; // The user's prompt
+  response: string; // The LLM's response
+  feedback?: UserFeedback; // Optional associated feedback
+  timestamp: number; // When this training data was recorded
+}
+
+/**
+ * Standardized LLM token usage interface.
+ */
+export interface LLMUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+}
+
+/**
+ * Standardized LLM result interface, including content and usage.
+ */
+export interface LLMResult {
+  content: string;
+  usage?: LLMUsage;
+}
+
+/**
  * LLM Service interface
  */
 export interface ILLMService {
   providerName: AIProvider;
   commonSettings: LLMProviderSettings;
-  sendMessage(messages: LLMMessage[], systemPrompt: string): Promise<string>;
+  sendMessage(messages: LLMMessage[], systemPrompt: string): Promise<LLMResult>;
   sendMessageStream(
     messages: LLMMessage[],
-    systemPrompt: string
-  ): AsyncGenerator<string, void, unknown>;
+    systemPrompt: string,
+    signal?: AbortSignal // New optional parameter
+  ): AsyncGenerator<string, LLMUsage, unknown>;
   testConnection(): Promise<ConnectionTestResult>;
   isInitialized(): boolean;
   // New method for reinitializing with specific settings
-  reinitialize(commonSettings: LLMProviderSettings): void;
+  reinitialize(commonSettings: LLMProviderSettings, providerSpecificSettings: any): void;
 }
 
 /**

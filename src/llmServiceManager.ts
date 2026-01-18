@@ -6,10 +6,18 @@ import {
   ConnectionTestResult,
   PROVIDER_NAMES,
   LLMProviderSettings,
+  LLMUsage,
+  LLMResult,
 } from "./types";
 import { BedrockService } from "./bedrockService";
 import { GeminiService } from "./geminiService";
 import { GroqService } from "./groqService";
+import { TelemetryManager } from "./telemetry"; // New import
+import {
+  PerformanceOrchestrator,
+  OptimizedLLMRequest,
+  OptimizedLLMResponse
+} from "./performance/index";
 
 /**
  * Manager for LLM services - handles provider switching and unified API
@@ -19,9 +27,24 @@ export class LLMServiceManager {
   private bedrockService: BedrockService;
   private geminiService: GeminiService;
   private groqService: GroqService;
+  private telemetryManager: TelemetryManager; // New property
+  private performanceOrchestrator: PerformanceOrchestrator;
 
-  constructor(settings: AIAssistantSettings) {
+  constructor(settings: AIAssistantSettings, telemetryManager?: TelemetryManager) {
     this.settings = settings;
+    this.telemetryManager = telemetryManager || new TelemetryManager(); // Initialize telemetryManager with fallback
+
+    // Initialize performance orchestrator
+    this.performanceOrchestrator = new PerformanceOrchestrator({
+      enableCaching: true,
+      enableContextOptimization: true,
+      enableTokenOptimization: true,
+      enableRetry: true,
+      enableMonitoring: true,
+      maxCacheSizeMB: 100,
+      cacheTTL: 30 * 60 * 1000, // 30 minutes
+    }, this.telemetryManager);
+
     const commonSettings: LLMProviderSettings = {
       maxTokens: settings.maxTokens,
       temperature: settings.temperature,
@@ -66,9 +89,9 @@ export class LLMServiceManager {
     };
 
     // Reinitialize each service with its specific settings and the common settings
-    this.bedrockService.reinitialize(settings.bedrock, commonSettings);
-    this.geminiService.reinitialize(settings.gemini, commonSettings);
-    this.groqService.reinitialize(settings.groq, commonSettings);
+    this.bedrockService.reinitialize(commonSettings, settings.bedrock);
+    this.geminiService.reinitialize(commonSettings, settings.gemini);
+    this.groqService.reinitialize(commonSettings, settings.groq);
   }
 
   /**
@@ -160,16 +183,48 @@ export class LLMServiceManager {
   public async sendMessage(
     messages: LLMMessage[],
     systemPrompt: string
-  ): Promise<string> {
+  ): Promise<LLMResult> {
     const service = this.getActiveService();
-
+    const providerName = this.getCurrentProviderName();
+    const modelId = this.getCurrentModelId();
+    const startTime = Date.now();
+    let success = false;
+    let errorMessage: string | undefined;
+    let usage: LLMUsage | undefined;
+    
     if (!service.isInitialized()) {
-      throw new Error(
-        `${this.getCurrentProviderName()} is not configured. Please add your credentials in settings.`
+      errorMessage = `${providerName} is not configured. Please add your credentials in settings.`;
+      this.telemetryManager.recordLlmCall(
+        this.settings.provider,
+        modelId,
+        Date.now() - startTime,
+        undefined,
+        undefined,
+        false,
+        errorMessage
       );
+      throw new Error(errorMessage);
     }
 
-    return await service.sendMessage(messages, systemPrompt);
+    try {
+      const response = await service.sendMessage(messages, systemPrompt);
+      usage = response.usage;
+      success = true;
+      return response;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+      throw error;
+    } finally {
+      this.telemetryManager.recordLlmCall(
+        this.settings.provider,
+        modelId,
+        Date.now() - startTime,
+        usage?.inputTokens,
+        usage?.outputTokens,
+        success,
+        errorMessage
+      );
+    }
   }
 
   /**
@@ -177,17 +232,61 @@ export class LLMServiceManager {
    */
   public async *sendMessageStream(
     messages: LLMMessage[],
-    systemPrompt: string
-  ): AsyncGenerator<string, void, unknown> {
+    systemPrompt: string,
+    signal?: AbortSignal // Add AbortSignal parameter
+  ): AsyncGenerator<string, LLMUsage, unknown> {
     const service = this.getActiveService();
+    const providerName = this.getCurrentProviderName();
+    const modelId = this.getCurrentModelId();
+    const startTime = Date.now();
+    let success = false;
+    let errorMessage: string | undefined;
+    let usage: LLMUsage | undefined;
 
     if (!service.isInitialized()) {
-      throw new Error(
-        `${this.getCurrentProviderName()} is not configured. Please add your credentials in settings.`
+      errorMessage = `${providerName} is not configured. Please add your credentials in settings.`;
+      this.telemetryManager.recordLlmCall(
+        this.settings.provider,
+        modelId,
+        Date.now() - startTime,
+        undefined,
+        undefined,
+        false,
+        errorMessage
       );
+      throw new Error(errorMessage);
     }
 
-    yield* service.sendMessageStream(messages, systemPrompt);
+    try {
+      const streamGenerator = service.sendMessageStream(messages, systemPrompt, signal); // Pass signal here
+      let result: IteratorResult<string, LLMUsage | void>;
+
+      // Manually iterate to capture the final return value (LLMUsage)
+      while (true) {
+        result = await streamGenerator.next();
+        if (result.done) {
+          if (result.value) { // The LLMUsage object
+            usage = result.value as LLMUsage;
+          }
+          break; // Generator is done
+        }
+        yield result.value; // Yield content chunks
+      }
+      success = true;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+      throw error;
+    } finally {
+      this.telemetryManager.recordLlmCall(
+        this.settings.provider,
+        modelId,
+        Date.now() - startTime,
+        usage?.inputTokens,
+        usage?.outputTokens,
+        success,
+        errorMessage
+      );
+    }
   }
 
   /**
@@ -246,5 +345,64 @@ export class LLMServiceManager {
         active: this.settings.provider === "groq",
       },
     };
+  }
+
+  /**
+   * Send a message using the optimized performance system
+   */
+  public async sendMessageOptimized(
+    messages: LLMMessage[],
+    systemPrompt: string,
+    signal?: AbortSignal
+  ): Promise<OptimizedLLMResponse> {
+    const request: OptimizedLLMRequest = {
+      messages,
+      systemPrompt,
+      provider: this.settings.provider,
+      modelId: this.getCurrentModelId(),
+      options: {
+        maxTokens: this.settings.maxTokens,
+        temperature: this.settings.temperature,
+      },
+      signal,
+    };
+
+    return await this.performanceOrchestrator.processRequest(request);
+  }
+
+  /**
+   * Get current LLM service for direct access (used by performance orchestrator)
+   */
+  public getCurrentLLMService(): ILLMService | null {
+    const service = this.getActiveService();
+    return service.isInitialized() ? service : null;
+  }
+
+  /**
+   * Get performance report for the LLM service manager
+   */
+  public async getPerformanceReport() {
+    return await this.performanceOrchestrator.generatePerformanceReport();
+  }
+
+  /**
+   * Update performance configuration
+   */
+  public updatePerformanceConfig(config: any) {
+    this.performanceOrchestrator.updateConfig(config);
+  }
+
+  /**
+   * Get performance system status
+   */
+  public getPerformanceStatus() {
+    return this.performanceOrchestrator.getSystemStatus();
+  }
+
+  /**
+   * Clear performance caches
+   */
+  public async clearPerformanceCaches() {
+    await this.performanceOrchestrator.clearCaches();
   }
 }

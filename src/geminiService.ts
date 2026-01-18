@@ -28,8 +28,8 @@ export class GeminiService implements ILLMService {
   /**
    * Reinitialize with updated settings
    */
-  public reinitialize(geminiSettings: GeminiSettings, commonSettings: LLMProviderSettings): void {
-    this.geminiSettings = geminiSettings;
+  public reinitialize(commonSettings: LLMProviderSettings, providerSpecificSettings: GeminiSettings): void {
+    this.geminiSettings = providerSpecificSettings;
     this.commonSettings = commonSettings;
   }
 
@@ -83,7 +83,7 @@ export class GeminiService implements ILLMService {
   public async sendMessage(
     messages: LLMMessage[],
     systemPrompt: string
-  ): Promise<string> {
+  ): Promise<LLMResult> {
     if (!this.geminiSettings.geminiApiKey) {
       throw new Error("Gemini API key is not configured");
     }
@@ -116,15 +116,21 @@ export class GeminiService implements ILLMService {
       });
 
       const data = response.json as GeminiResponse;
-
+      let content = "";
       if (data.candidates && data.candidates.length > 0) {
         const candidate = data.candidates[0];
         if (candidate.content?.parts?.length > 0) {
-          return candidate.content.parts.map((p) => p.text).join("");
+          content = candidate.content.parts.map((p) => p.text).join("");
         }
       }
 
-      throw new Error("Empty response from Gemini");
+      const usage: LLMUsage = {
+        inputTokens: data.usageMetadata?.promptTokenCount,
+        outputTokens: data.usageMetadata?.candidatesTokenCount,
+        totalTokens: data.usageMetadata?.totalTokenCount,
+      };
+
+      return { content, usage };
     } catch (error) {
       throw new Error(this.parseError(error));
     }
@@ -135,8 +141,9 @@ export class GeminiService implements ILLMService {
    */
   public async *sendMessageStream(
     messages: LLMMessage[],
-    systemPrompt: string
-  ): AsyncGenerator<string, void, unknown> {
+    systemPrompt: string,
+    signal?: AbortSignal // Add AbortSignal parameter
+  ): AsyncGenerator<string, LLMUsage, unknown> {
     if (!this.geminiSettings.geminiApiKey) {
       throw new Error("Gemini API key is not configured");
     }
@@ -158,17 +165,16 @@ export class GeminiService implements ILLMService {
 
     const url = `${this.baseUrl}/models/${this.getEffectiveModelId()}:streamGenerateContent?key=${this.geminiSettings.geminiApiKey}&alt=sse`;
 
+    let finalUsage: LLMUsage | undefined;
+
     try {
-      // REQUIRED: We use native fetch here because Obsidian's requestUrl doesn't support
-      // ReadableStream responses, which is required for Server-Sent Events (SSE) streaming.
-      // For non-streaming requests, we correctly use requestUrl (see sendMessage method).
-      // This is a technical limitation of Obsidian's API, not a preference.
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
+        signal: signal, // Pass signal here
       });
 
       if (!response.ok) {
@@ -185,8 +191,32 @@ export class GeminiService implements ILLMService {
       let buffer = "";
 
       while (true) {
+        if (signal?.aborted) { // Check if the request was aborted
+          reader.cancel("Stream aborted by user.");
+          throw new Error("Gemini stream aborted by user.");
+        }
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          // Process any remaining buffer content
+          if (buffer.startsWith("data: ")) {
+            const jsonStr = buffer.slice(6).trim();
+            if (jsonStr && jsonStr !== "[DONE]") {
+              try {
+                const data = JSON.parse(jsonStr);
+                if (data.usageMetadata) {
+                  finalUsage = {
+                    inputTokens: data.usageMetadata.promptTokenCount,
+                    outputTokens: data.usageMetadata.candidatesTokenCount,
+                    totalTokens: data.usageMetadata.totalTokenCount,
+                  };
+                }
+              } catch {
+                // Skip invalid JSON chunks
+              }
+            }
+          }
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -201,6 +231,13 @@ export class GeminiService implements ILLMService {
                 if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
                   yield data.candidates[0].content.parts[0].text;
                 }
+                if (data.usageMetadata) {
+                  finalUsage = {
+                    inputTokens: data.usageMetadata.promptTokenCount,
+                    outputTokens: data.usageMetadata.candidatesTokenCount,
+                    totalTokens: data.usageMetadata.totalTokenCount,
+                  };
+                }
               } catch {
                 // Skip invalid JSON chunks
               }
@@ -208,6 +245,7 @@ export class GeminiService implements ILLMService {
           }
         }
       }
+      return finalUsage; // Return the usage at the end of the generator
     } catch (error) {
       throw new Error(this.parseError(error));
     }

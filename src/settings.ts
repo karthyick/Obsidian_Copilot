@@ -144,13 +144,13 @@ export class AIAssistantSettingTab extends PluginSettingTab {
     switch (provider) {
       case "bedrock":
         return !!(
-          this.plugin.settings.awsAccessKeyId &&
-          this.plugin.settings.awsSecretAccessKey
+          this.plugin.settings.bedrock.awsAccessKeyId &&
+          this.plugin.settings.bedrock.awsSecretAccessKey
         );
       case "gemini":
-        return !!this.plugin.settings.geminiApiKey;
+        return !!this.plugin.settings.gemini.geminiApiKey;
       case "groq":
-        return !!this.plugin.settings.groqApiKey;
+        return !!this.plugin.settings.groq.groqApiKey;
       default:
         return false;
     }
@@ -181,9 +181,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder("Enter your access key ID")
-          .setValue(this.plugin.settings.awsAccessKeyId)
+          .setValue(this.plugin.settings.bedrock.awsAccessKeyId)
           .onChange(this.wrapVoid(async (value) => {
-            this.plugin.settings.awsAccessKeyId = value;
+            this.plugin.settings.bedrock.awsAccessKeyId = value;
             await this.plugin.saveSettings();
           }))
       );
@@ -194,9 +194,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addText((text) => {
         text
           .setPlaceholder("Enter your secret access key")
-          .setValue(this.plugin.settings.awsSecretAccessKey)
+          .setValue(this.plugin.settings.bedrock.awsSecretAccessKey)
           .onChange(this.wrapVoid(async (value) => {
-            this.plugin.settings.awsSecretAccessKey = value;
+            this.plugin.settings.bedrock.awsSecretAccessKey = value;
             await this.plugin.saveSettings();
           }));
         text.inputEl.type = "password";
@@ -209,9 +209,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addText((text) => {
         text
           .setPlaceholder("Enter session token (if using temporary credentials)")
-          .setValue(this.plugin.settings.awsSessionToken)
+          .setValue(this.plugin.settings.bedrock.awsSessionToken)
           .onChange(this.wrapVoid(async (value) => {
-            this.plugin.settings.awsSessionToken = value;
+            this.plugin.settings.bedrock.awsSessionToken = value;
             await this.plugin.saveSettings();
           }));
         text.inputEl.type = "password";
@@ -224,9 +224,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addText((text) =>
         text
           .setPlaceholder("Region code")
-          .setValue(this.plugin.settings.awsRegion)
+          .setValue(this.plugin.settings.bedrock.awsRegion)
           .onChange(this.wrapVoid(async (value) => {
-            this.plugin.settings.awsRegion = value.trim();
+            this.plugin.settings.bedrock.awsRegion = value.trim();
             await this.plugin.saveSettings();
             this.plugin.reinitializeLLMService();
           }))
@@ -238,9 +238,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         this.bedrockDropdown = dropdown;
         this.populateBedrockDropdown(dropdown);
-        dropdown.setValue(this.plugin.settings.bedrockModelId);
+        dropdown.setValue(this.plugin.settings.bedrock.bedrockModelId);
         dropdown.onChange(this.wrapVoid(async (value) => {
-          this.plugin.settings.bedrockModelId = value;
+          this.plugin.settings.bedrock.bedrockModelId = value;
           await this.plugin.saveSettings();
           this.display(); // Refresh to show/hide custom model textbox
         }));
@@ -258,16 +258,16 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
 
     // Custom model ID textbox (shown when "Other" is selected)
-    if (this.plugin.settings.bedrockModelId === "other") {
+    if (this.plugin.settings.bedrock.bedrockModelId === "other") {
       new Setting(section)
         .setName("Custom model")
         .setDesc("Full Bedrock model ID")
         .addText((text) =>
           text
             .setPlaceholder("Enter custom model ID")
-            .setValue(this.plugin.settings.bedrockCustomModelId)
+            .setValue(this.plugin.settings.bedrock.bedrockCustomModelId)
             .onChange(this.wrapVoid(async (value) => {
-              this.plugin.settings.bedrockCustomModelId = value.trim();
+              this.plugin.settings.bedrock.bedrockCustomModelId = value.trim();
               await this.plugin.saveSettings();
             }))
         );
@@ -312,9 +312,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addText((text) => {
         text
           .setPlaceholder("Enter API key")
-          .setValue(this.plugin.settings.geminiApiKey)
+          .setValue(this.plugin.settings.gemini.geminiApiKey)
           .onChange(this.wrapVoid(async (value) => {
-            this.plugin.settings.geminiApiKey = value;
+            this.plugin.settings.gemini.geminiApiKey = value;
             await this.plugin.saveSettings();
             // Refresh models when API key changes
             void this.refreshGeminiModels();
@@ -329,9 +329,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         this.geminiDropdown = dropdown;
         this.populateGeminiDropdown(dropdown);
-        dropdown.setValue(this.plugin.settings.geminiModelId);
+        dropdown.setValue(this.plugin.settings.gemini.geminiModelId);
         dropdown.onChange(this.wrapVoid(async (value) => {
-          this.plugin.settings.geminiModelId = value;
+          this.plugin.settings.gemini.geminiModelId = value;
           await this.plugin.saveSettings();
           this.display(); // Refresh to show/hide custom model textbox
         }));
@@ -349,16 +349,16 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
 
     // Custom model ID textbox (shown when "Other" is selected)
-    if (this.plugin.settings.geminiModelId === "other") {
+    if (this.plugin.settings.gemini.geminiModelId === "other") {
       new Setting(section)
         .setName("Custom model")
         .setDesc("Gemini model ID")
         .addText((text) =>
           text
             .setPlaceholder("Enter custom model ID")
-            .setValue(this.plugin.settings.geminiCustomModelId)
+            .setValue(this.plugin.settings.gemini.geminiCustomModelId)
             .onChange(this.wrapVoid(async (value) => {
-              this.plugin.settings.geminiCustomModelId = value.trim();
+              this.plugin.settings.gemini.geminiCustomModelId = value.trim();
               await this.plugin.saveSettings();
             }))
         );
@@ -406,7 +406,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         this.bedrockDropdown.setValue(currentValue);
       } else if (this.bedrockModels.length > 0) {
         this.bedrockDropdown.setValue(this.bedrockModels[0].id);
-        this.plugin.settings.bedrockModelId = this.bedrockModels[0].id;
+        this.plugin.settings.bedrock.bedrockModelId = this.bedrockModels[0].id;
         await this.plugin.saveSettings();
       }
     }
@@ -432,10 +432,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Refresh Gemini models from API
    */
   private async refreshGeminiModels(): Promise<void> {
-    if (!this.plugin.settings.geminiApiKey) {
+    if (!this.plugin.settings.gemini.geminiApiKey) {
       this.geminiModels = ModelFetcher.getFallbackGeminiModels();
     } else {
-      const models = await ModelFetcher.fetchGeminiModels(this.plugin.settings.geminiApiKey);
+      const models = await ModelFetcher.fetchGeminiModels(this.plugin.settings.gemini.geminiApiKey);
       this.geminiModels = models.length > 0 ? models : ModelFetcher.getFallbackGeminiModels();
     }
 
@@ -448,7 +448,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         this.geminiDropdown.setValue(currentValue);
       } else if (this.geminiModels.length > 0) {
         this.geminiDropdown.setValue(this.geminiModels[0].id);
-        this.plugin.settings.geminiModelId = this.geminiModels[0].id;
+        this.plugin.settings.gemini.geminiModelId = this.geminiModels[0].id;
         await this.plugin.saveSettings();
       }
     }
@@ -495,9 +495,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addText((text) => {
         text
           .setPlaceholder("Enter API key")
-          .setValue(this.plugin.settings.groqApiKey)
+          .setValue(this.plugin.settings.groq.groqApiKey)
           .onChange(this.wrapVoid(async (value) => {
-            this.plugin.settings.groqApiKey = value;
+            this.plugin.settings.groq.groqApiKey = value;
             await this.plugin.saveSettings();
             // Refresh models when API key changes
             void this.refreshGroqModels();
@@ -512,9 +512,9 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         this.groqDropdown = dropdown;
         this.populateGroqDropdown(dropdown);
-        dropdown.setValue(this.plugin.settings.groqModelId);
+        dropdown.setValue(this.plugin.settings.groq.groqModelId);
         dropdown.onChange(this.wrapVoid(async (value) => {
-          this.plugin.settings.groqModelId = value;
+          this.plugin.settings.groq.groqModelId = value;
           await this.plugin.saveSettings();
           this.display(); // Refresh to show/hide custom model textbox
         }));
@@ -532,16 +532,16 @@ export class AIAssistantSettingTab extends PluginSettingTab {
       );
 
     // Custom model ID textbox (shown when "Other" is selected)
-    if (this.plugin.settings.groqModelId === "other") {
+    if (this.plugin.settings.groq.groqModelId === "other") {
       new Setting(section)
         .setName("Custom model")
         .setDesc("Groq model ID")
         .addText((text) =>
           text
             .setPlaceholder("Enter custom model ID")
-            .setValue(this.plugin.settings.groqCustomModelId)
+            .setValue(this.plugin.settings.groq.groqCustomModelId)
             .onChange(this.wrapVoid(async (value) => {
-              this.plugin.settings.groqCustomModelId = value.trim();
+              this.plugin.settings.groq.groqCustomModelId = value.trim();
               await this.plugin.saveSettings();
             }))
         );
@@ -578,10 +578,10 @@ export class AIAssistantSettingTab extends PluginSettingTab {
    * Refresh Groq models from API
    */
   private async refreshGroqModels(): Promise<void> {
-    if (!this.plugin.settings.groqApiKey) {
+    if (!this.plugin.settings.groq.groqApiKey) {
       this.groqModels = ModelFetcher.getFallbackGroqModels();
     } else {
-      const models = await ModelFetcher.fetchGroqModels(this.plugin.settings.groqApiKey);
+      const models = await ModelFetcher.fetchGroqModels(this.plugin.settings.groq.groqApiKey);
       this.groqModels = models.length > 0 ? models : ModelFetcher.getFallbackGroqModels();
     }
 
@@ -594,7 +594,7 @@ export class AIAssistantSettingTab extends PluginSettingTab {
         this.groqDropdown.setValue(currentValue);
       } else if (this.groqModels.length > 0) {
         this.groqDropdown.setValue(this.groqModels[0].id);
-        this.plugin.settings.groqModelId = this.groqModels[0].id;
+        this.plugin.settings.groq.groqModelId = this.groqModels[0].id;
         await this.plugin.saveSettings();
       }
     }
@@ -975,34 +975,34 @@ export function validateSettings(settings: AIAssistantSettings): {
 
   switch (settings.provider) {
     case "bedrock":
-      if (!settings.awsAccessKeyId) {
+      if (!settings.bedrock.awsAccessKeyId) {
         errors.push("AWS Access Key ID is required");
       }
-      if (!settings.awsSecretAccessKey) {
+      if (!settings.bedrock.awsSecretAccessKey) {
         errors.push("AWS Secret Access Key is required");
       }
-      if (!settings.awsRegion) {
+      if (!settings.bedrock.awsRegion) {
         errors.push("AWS Region is required");
       }
-      if (!settings.bedrockModelId) {
+      if (!settings.bedrock.bedrockModelId) {
         errors.push("Bedrock model is required");
       }
       break;
 
     case "gemini":
-      if (!settings.geminiApiKey) {
+      if (!settings.gemini.geminiApiKey) {
         errors.push("Gemini API key is required");
       }
-      if (!settings.geminiModelId) {
+      if (!settings.gemini.geminiModelId) {
         errors.push("Gemini model is required");
       }
       break;
 
     case "groq":
-      if (!settings.groqApiKey) {
+      if (!settings.groq.groqApiKey) {
         errors.push("Groq API key is required");
       }
-      if (!settings.groqModelId) {
+      if (!settings.groq.groqModelId) {
         errors.push("Groq model is required");
       }
       break;
