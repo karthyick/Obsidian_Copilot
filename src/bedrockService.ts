@@ -61,8 +61,8 @@ export class BedrockService implements ILLMService {
   /**
    * Reinitialize the client with updated settings
    */
-  public reinitialize(bedrockSettings: BedrockSettings, commonSettings: LLMProviderSettings): void {
-    this.bedrockSettings = bedrockSettings;
+  public reinitialize(commonSettings: LLMProviderSettings, providerSpecificSettings: BedrockSettings): void {
+    this.bedrockSettings = providerSpecificSettings;
     this.commonSettings = commonSettings;
     this.initializeClient();
   }
@@ -134,7 +134,7 @@ export class BedrockService implements ILLMService {
   public async sendMessage(
     messages: LLMMessage[],
     systemPrompt: string
-  ): Promise<string> {
+  ): Promise<LLMResult> {
     if (!this.client) {
       throw new Error("Bedrock client not initialized. Please configure AWS credentials.");
     }
@@ -162,10 +162,17 @@ export class BedrockService implements ILLMService {
       ) as BedrockResponse;
 
       if (responseBody.content && responseBody.content.length > 0) {
-        return responseBody.content
+        const content = responseBody.content
           .filter((block) => block.type === "text")
           .map((block) => block.text)
           .join("");
+        
+        const usage: LLMUsage = {
+          inputTokens: responseBody.usage?.input_tokens,
+          outputTokens: responseBody.usage?.output_tokens,
+        };
+
+        return { content, usage };
       }
 
       throw new Error("Empty response from Bedrock");
@@ -179,8 +186,9 @@ export class BedrockService implements ILLMService {
    */
   public async *sendMessageStream(
     messages: LLMMessage[],
-    systemPrompt: string
-  ): AsyncGenerator<string, void, unknown> {
+    systemPrompt: string,
+    signal?: AbortSignal // Add AbortSignal parameter
+  ): AsyncGenerator<string, LLMUsage, unknown> {
     if (!this.client) {
       throw new Error("Bedrock client not initialized. Please configure AWS credentials.");
     }
@@ -201,14 +209,21 @@ export class BedrockService implements ILLMService {
       body: JSON.stringify(requestBody),
     });
 
+    let inputTokens: number | undefined;
+    let outputTokens: number = 0; // Initialize with 0 for streaming partial results
+    let finalUsage: LLMUsage | undefined;
+
     try {
-      const response = await this.client.send(command);
+      const response = await this.client.send(command, { abortSignal: signal }); // Pass signal here
 
       if (!response.body) {
         throw new Error("No response body received");
       }
 
       for await (const event of response.body) {
+        if (signal?.aborted) { // Check if the request was aborted
+          throw new Error("Bedrock stream aborted by user.");
+        }
         if (event.chunk?.bytes) {
           const chunkData = JSON.parse(
             new TextDecoder().decode(event.chunk.bytes)
@@ -218,18 +233,33 @@ export class BedrockService implements ILLMService {
           if (chunkData.type === "content_block_delta") {
             if (chunkData.delta?.type === "text_delta" && chunkData.delta?.text) {
               yield chunkData.delta.text;
+              // A simple char count is a proxy for token count in stream
+              // A more accurate count would require a tokenizer
+              outputTokens += chunkData.delta.text.length > 0 ? chunkData.delta.text.split(/\s+/).length || 1 : 0;
             }
-          } else if (chunkData.type === "message_delta") {
-            // Message complete, stop_reason available
-            if (chunkData.delta?.stop_reason) {
-              // Stream complete
-              return;
+          } else if (chunkData.type === "message_start") {
+            inputTokens = chunkData.message.usage.input_tokens;
+          }
+          else if (chunkData.type === "message_delta") {
+            // outputTokens can be updated here from chunkData.usage.output_tokens if available in this event
+            // Bedrock's message_delta doesn't always provide output_tokens for every delta,
+            // but message_stop or message_start has comprehensive usage.
+          }
+          else if (chunkData.type === "message_stop") {
+            // This event contains the final usage information
+            if (chunkData.amazon_bedrock_invocationMetrics) {
+              inputTokens = chunkData.amazon_bedrock_invocationMetrics.inputTokenCount;
+              outputTokens = chunkData.amazon_bedrock_invocationMetrics.outputTokenCount;
             }
-          } else if (chunkData.type === "error") {
+            finalUsage = { inputTokens, outputTokens };
+            return finalUsage; // Return the usage at the end of the generator
+          }
+          else if (chunkData.type === "error") {
             throw new Error(chunkData.error?.message || "Stream error");
           }
         }
       }
+      return finalUsage; // Ensure a return even if message_stop is not explicitly handled by for-await-of loop
     } catch (error) {
       throw new Error(this.parseError(error));
     }

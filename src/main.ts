@@ -15,6 +15,9 @@ import { ClipboardExporter } from "./exporters/clipboardExporter";
 import { HTMLExporter } from "./exporters/htmlExporter";
 import { DOCXExporter } from "./exporters/docxExporter";
 import { ExportModal } from "./ui/ExportModal";
+import { LlmContextManager, ILlmContextApi } from "./api";
+import { FeedbackManager } from "./feedbackManager";
+import { TelemetryManager } from "./telemetry"; // New import
 
 /**
  * Main plugin class for AI Assistant
@@ -24,18 +27,30 @@ export default class AIAssistantPlugin extends Plugin {
   llmService: LLMServiceManager;
   noteController: NoteController;
   contextBuilder: ContextBuilder;
+  feedbackManager: FeedbackManager;
+  telemetryManager: TelemetryManager; // New property
+  public api: ILlmContextApi;
 
   async onload(): Promise<void> {
     // Load settings
     await this.loadSettings();
 
+    // Initialize Telemetry Manager first
+    this.telemetryManager = new TelemetryManager(); // Instantiate
+    this.telemetryManager.init(); // Initialize
+
     // Initialize services
     this.noteController = new NoteController(this.app);
-    this.llmService = new LLMServiceManager(this.settings);
+    this.llmService = new LLMServiceManager(this.settings, this.telemetryManager);
     this.contextBuilder = new ContextBuilder(
       this.noteController,
       () => this.settings.excludedNotes
     );
+    this.feedbackManager = new FeedbackManager(this.app, this, this.telemetryManager); // Pass telemetryManager
+    await this.feedbackManager.loadFeedback();
+
+    // Initialize the public API
+    this.api = new LlmContextManager(this.app, this.settings, this.llmService, this.feedbackManager, this.telemetryManager); // Pass telemetryManager
 
     // Register view
     this.registerView(

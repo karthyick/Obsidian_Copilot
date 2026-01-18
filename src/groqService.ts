@@ -29,8 +29,8 @@ export class GroqService implements ILLMService {
   /**
    * Reinitialize with updated settings
    */
-  public reinitialize(groqSettings: GroqSettings, commonSettings: LLMProviderSettings): void {
-    this.groqSettings = groqSettings;
+  public reinitialize(commonSettings: LLMProviderSettings, providerSpecificSettings: GroqSettings): void {
+    this.groqSettings = providerSpecificSettings;
     this.commonSettings = commonSettings;
   }
 
@@ -53,12 +53,32 @@ export class GroqService implements ILLMService {
     }
 
     try {
-      const response = await this.sendMessage(
+      // Create a dummy message for testing connection
+      const groqMessages = this.convertToGroqFormat(
         [{ role: "user", content: "Reply with 'OK'" }],
         "Reply with 'OK'"
       );
+      const requestBody: GroqRequestBody = {
+        model: this.getEffectiveModelId(),
+        messages: groqMessages,
+        max_tokens: 10,
+        temperature: 0,
+        stream: false,
+      };
 
-      if (response) {
+      const response = await requestUrl({
+        url: `${this.baseUrl}/chat/completions`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.groqSettings.groqApiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = response.json as GroqResponse;
+
+      if (data.choices && data.choices.length > 0) {
         return {
           success: true,
           message: "Connection successful",
@@ -84,7 +104,7 @@ export class GroqService implements ILLMService {
   public async sendMessage(
     messages: LLMMessage[],
     systemPrompt: string
-  ): Promise<string> {
+  ): Promise<LLMResult> {
     if (!this.groqSettings.groqApiKey) {
       throw new Error("Groq API key is not configured");
     }
@@ -110,12 +130,18 @@ export class GroqService implements ILLMService {
       });
 
       const data = response.json as GroqResponse;
-
+      let content = "";
       if (data.choices && data.choices.length > 0) {
-        return data.choices[0].message.content;
+        content = data.choices[0].message.content;
       }
 
-      throw new Error("Empty response from Groq");
+      const usage: LLMUsage = {
+        inputTokens: data.usage?.prompt_tokens,
+        outputTokens: data.usage?.completion_tokens,
+        totalTokens: data.usage?.total_tokens,
+      };
+
+      return { content, usage };
     } catch (error) {
       throw new Error(this.parseError(error));
     }
@@ -126,8 +152,9 @@ export class GroqService implements ILLMService {
    */
   public async *sendMessageStream(
     messages: LLMMessage[],
-    systemPrompt: string
-  ): AsyncGenerator<string, void, unknown> {
+    systemPrompt: string,
+    signal?: AbortSignal // Add AbortSignal parameter
+  ): AsyncGenerator<string, LLMUsage, unknown> {
     if (!this.groqSettings.groqApiKey) {
       throw new Error("Groq API key is not configured");
     }
@@ -141,6 +168,8 @@ export class GroqService implements ILLMService {
       stream: true,
     };
 
+    let finalUsage: LLMUsage | undefined;
+
     try {
       // REQUIRED: We use native fetch here because Obsidian's requestUrl doesn't support
       // ReadableStream responses, which is required for Server-Sent Events (SSE) streaming.
@@ -153,6 +182,7 @@ export class GroqService implements ILLMService {
           Authorization: `Bearer ${this.groqSettings.groqApiKey}`,
         },
         body: JSON.stringify(requestBody),
+        signal: signal, // Pass signal here
       });
 
       if (!response.ok) {
@@ -169,8 +199,32 @@ export class GroqService implements ILLMService {
       let buffer = "";
 
       while (true) {
+        if (signal?.aborted) { // Check if the request was aborted
+          reader.cancel("Stream aborted by user.");
+          throw new Error("Groq stream aborted by user.");
+        }
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          // Process any remaining buffer content, especially the final usage metadata
+          if (buffer.startsWith("data: ")) {
+            const jsonStr = buffer.slice(6).trim();
+            if (jsonStr && jsonStr !== "[DONE]") {
+              try {
+                const chunk = JSON.parse(jsonStr) as GroqStreamChunk;
+                if (chunk.usage) { // Check if usage is directly in the chunk
+                  finalUsage = {
+                    inputTokens: chunk.usage.prompt_tokens,
+                    outputTokens: chunk.usage.completion_tokens,
+                    totalTokens: chunk.usage.total_tokens,
+                  };
+                }
+              } catch {
+                // Skip invalid JSON chunks
+              }
+            }
+          }
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -185,6 +239,14 @@ export class GroqService implements ILLMService {
                 if (chunk.choices?.[0]?.delta?.content) {
                   yield chunk.choices[0].delta.content;
                 }
+                if (chunk.usage) {
+                  // Capture usage if it's in an intermediate chunk (usually not for Groq, but defensive)
+                  finalUsage = {
+                    inputTokens: chunk.usage.prompt_tokens,
+                    outputTokens: chunk.usage.completion_tokens,
+                    totalTokens: chunk.usage.total_tokens,
+                  };
+                }
               } catch {
                 // Skip invalid JSON chunks
               }
@@ -192,6 +254,7 @@ export class GroqService implements ILLMService {
           }
         }
       }
+      return finalUsage; // Return the usage at the end of the generator
     } catch (error) {
       throw new Error(this.parseError(error));
     }
